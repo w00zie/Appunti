@@ -1,0 +1,184 @@
+\section{Fusione dell'Informazione nei Sistemi Multi-Agente}
+In molti contesti l'informazioni su variabili/vettori di interesse $x$ \`e rappresentata da una pdf $p(x)$ (che puo essere pensata in uscita da un processo di stima/inferenza Bayesiana dai dati)
+\begin{center}
+\begin{tikzpicture}[node distance=2.5cm,auto,>=latex']
+    \node [int] (a) {Inferenza Bayesiana};
+    \node (b) [left of=a,node distance=3cm] {Dati};
+    \node (c) [right of=a,node distance=3cm] {$p(x)$};
+    \path[->] (b) edge node {} (a);
+    \path[->] (a) edge node {} (c);
+\end{tikzpicture}
+\end{center}
+
+Tra le rappresentazioni tipiche per le $p(x)$ si ha:
+
+\begin{itemize}
+\item La \textit{Gaussiana} (funziona nei casi piu semplici): ovvero si rappresenta l'incertezza in termini di media $\mu$ e matrice di covarianza $\Sigma$:
+\begin{equation}
+p(x) = \mathcal{N}(x; \mu, \Sigma) \propto e^{-\frac{1}{2} (x-\mu)^T \Sigma^{-1} (x- \mu)}
+\end{equation}
+in cui la media \`e il valore pi\`u probabile e la covarianza misura la confidenza sulla media.
+
+\item \textit{Mistura di Gaussiane}:
+    \begin{equation}
+    p(x) = \sum_{c=1}^{n_c} \mathcal{N}(x; \mu_c, \Sigma_c)
+    \end{equation} 
+    dove $n_c$ \`e il numero di componenti gaussiane, $\sigma_c$ la media della componente $c$-esima e $\Sigma_c$ la sua covarianza. Non sempre \`e possibile rappresentare l'incertezza in termini di valore pi\`u probabile e dispersione ma si ha bisogno di un modello pi\`u flessibile e generale. Una mistura di gaussiane \`e un \textbf{approssimatore universale}, con cui si pu\`o approssimare con errore arbitrario un'arbitraria funzione $f(x)$ (continua su un compatto) al crescere di $n_c$, al variare di $\mu_c, \Sigma_c$.
+
+\item \textit{Insieme di particelle}: si ha un insieme di $n_c$ particelle ciascuna con un suo peso $w_c$:
+    \begin{equation}
+    \{w_c, x_c \}_{c=1}^{n_c}
+    \end{equation}
+    dove $x_c$ \`e la posizione della $c$-esima particella. Questa \`e una rappresentazione campionaria della pdf in cui il peso $w_c$ rappresenta la probabilit\`a di un valore $x_c$. Si ha
+    \begin{equation}
+    \sum_{c=1}^{n_c} w_c = 1
+    \end{equation}
+    L'informazione \`e quindi codificata in termini di posizione e pesi delle particelle. Matematicamente si pu\`o vedere come somma di delte di Dirac
+    \begin{equation}
+    p(x) = \sum_{c=1}^{n_c} w_c \delta (x - x_c)
+    \end{equation} La rappresentazione come insieme di particelle permette di svolgere pi\`u agevolmente il calcolo degli integrali (Metodo Monte Carlo):
+    \begin{equation}
+    \int_X p(x) dx = \int_X \sum_{c=1}^{n_c} w_c \delta(x-x_c) dx = \sum_{x_c \in X} w_c
+    \end{equation} e in generale
+    \begin{equation}
+    \mathbb{E} [f(x)] = \int f(x) p(x) dx = \int f(x) \sum_{c=1}^{n_c} w_c \delta (x - x_c) dx = \sum_{c=1}^{n_c} w_c f(x_c)
+    \end{equation}
+\end{itemize}
+
+Quindi se si hanno $N$ centri di elaborazione dati ognuno dei quali fornisce  una certa pdf $p_i(x)$ con $i=1,\dots, N$, il nostro obiettivo \`e ora quello di combinare queste informazioni per ottenere una singola pdf fusa $\bar{p}(x)$ che riassuma \textit{in modo ottimo} l'informazione contenuta nella pdf locali.\\
+L'\textbf{idea} \`e: se abbiamo $N$ stime/misure $x_1, x_2, \dots, x_N$ per calcolare una stima fusa si pu\`o utilizzare la media campionaria
+\begin{equation}
+\bar{x} = \frac{1}{N} \sum_{i=1}^N x_i
+\end{equation}
+oppure la mediana. Possiamo fare questo anche con le pdf e possiamo farlo in modo ottimo, ovvero definendo un criterio di ottimalit\`a. Ricordando che la media campionaria 
+\begin{equation}
+\bar{x} = \arg \min_x \sum_{i=1}^N \frac{1}{N} ||x - x_i||^2
+\end{equation} e la mediana
+\begin{equation}
+\bar{x} = \arg \min_x \sum_{i=1}^N \frac{1}{N} ||x - x_i||_1
+\end{equation} possono essere ottenute come il valore che minimizza la somma delle discrepanze (variazioni) rispetto ai valori da mediare $x_1, x_2, \dots, x_N$, si considera una misura di discrepanza $D$ tra pdf e si calcola $\bar{p}(x)$ come la densit\`a che rende minima la discrepanza totale rispetto alle pdf locali.
+\begin{equation}
+\bar{p}(x) = \arg \min_p \sum_{i=1}^N \frac{1}{N} D ( p, p_i )
+\end{equation} La misura di discrepanza pu\`o essere presa come la divergenza di Kullback-Leibler (entropia relativa), anche se ci sono altre scelte
+\begin{equation}
+D_{KL}(p_1 || p_2) = \int p_1(x) \log \frac{p_1(x)}{p_2(x)} dx
+\end{equation} Si vede facilmente che
+\begin{equation}
+D_{KL} (p_1 || p_2) = 0 \iff p_1(x) = p_2(x)
+\end{equation} \begin{equation}
+D_{KL} (p_1 || p_2) \geq 0, \quad \forall p_1, p_2
+\end{equation} e in generale \`e tanto pi\`u piccola quanto $p_1, p_2$ sono simili. 
+\textbf{N.B:} La divergenza KL non \`e una distanza perche non \`e simmetrica e non soddisfa la disuguaglianza triangolare.
+
+Poich\`e non \`e simmetrica si pu\`o definire due concetti di media, rispetto alla entropia relativa:
+\begin{itemize}
+\item \textit{Centroide sinistro} (cerca di massimizzare l'entropia): \begin{equation}
+\bar{p}_s(x) = \arg \min_{p} \sum_{i=1}^N \frac{1}{N} D_{KL}(p || p_i) 
+    \end{equation}
+\item \textit{Centroide destro} (cerca di minimizzare la perdita di informazione): \begin{equation}
+    \bar{p}_d(x) = \arg \min_{p} \sum_{i=1}^N \frac{1}{N} D_{KL}(p_i || p)
+    \end{equation}
+\end{itemize}
+Si pu\`o anche estendere questi concetti alle medie pesate:
+\begin{itemize}
+\item Centroide sinistro: \begin{equation}
+\bar{p}_s(x) = \arg \min_{p} \sum_{i=1}^N \pi_{i} D_{KL}(p || p_i) 
+    \end{equation}
+\item Centroide destro: \begin{equation}
+    \bar{p}_d(x) = \arg \min_{p} \sum_{i=1}^N \pi_{i} D_{KL}(p_i || p)
+    \end{equation}
+\end{itemize}
+con $\pi_i > 0$ che sommano a 1. Quando tutti i pesi sono uguali e uniformi $\pi_i = 1/N$ si ritrova le definizioni precedenti.
+I due centroidi si possono calcolare in modo analitico:
+\begin{equation}
+\bar{p}_d (x) = \sum_{i=1}^N \pi_i p_i(x) \qquad (media \quad aritmetica)
+\end{equation} e \begin{equation}
+\bar{p}_s (x) = \frac{\prod_{i=1}^N [p_i(x)]^{\pi_i}}{\int \prod_{i=1}^N [p_i(x)]^{\pi_i} dx } \qquad (media \quad geometrica \quad normalizzata)
+\end{equation} 
+\textbf{N.B:} I due centroidi hanno propriet\`a diverse: il centroide destro esegue una sorta di \textit{or} tra pdf, tendendo a preservare i picchi mentre il centroide sinistro fa una sorta di \textit{and} effettuando una fusione che privilegia i valori con probabilit\`a non basse in tutte le pdf locali.
+
+Dal punto di vista del calcolo:
+\begin{itemize}
+\item Il centroide destro si calcola facilmente per \textbf{tutte} le forme di pdf (Gaussiane, misture di gaussiane, insiemi a particelle, ...)
+ \begin{equation}
+ \bar{p}_d(x) = \sum_{i=1}^N \pi_i p_i(x)
+ \end{equation} Ad esempio se tutte le pdf sono gaussiane $p_i(x) = \mathcal{N}(x; \mu_i, \sigma_i)$ si ha
+  \begin{equation}
+    \bar{p}_d(x) = \sum_{i=1}^N \pi_i \mathcal{N}(x; \mu_i, \sigma_i)
+  \end{equation} (\`e abbastanza straightforward, non fa un gran riassunto dell'informazione e comporta un aumento di complessit\`a.)
+\item Il centroide sinistro si calcola facilmente \textit{solo in casi particolari} (es. Gaussiano) ma in generale (per $p_i(x)$ rappresentate da misture di gaussiane o insiemi di particelle) servono delle approssimazioni. Nel caso gaussiano, in cui le pdf sono $p_i(x) = \mathcal{N}(x; \mu_i, \Sigma_i)$ si ha
+  \begin{equation}
+  \bar{p}_s(x) = \mathcal{N}(x; \bar{\mu}, \bar{\Sigma})
+  \end{equation} con
+  \begin{align}
+  &\bar{\Sigma}^{-1} = \pi_1 \Sigma_1^{-1} + \dots + \pi_N \Sigma_N^{-1} \\
+  &\mu = \bar{\Sigma} \big ( \pi_1 \Sigma_1^{-1} \mu_1 + \dots + \pi_N \Sigma_N^{-1} \mu_N \big )
+  \end{align} La media fusa $\bar{\mu}$ \`e una media pesata delle medie $\mu_1, \dots, \mu_N$ in cui i pesi sono dati da $\pi_i \Sigma_i^{-1}$. Un valore di $\Sigma_i$ grande implica poca confidenza nel valor medio $\mu_i$ che genera una gaussiana pi\`u "spanciata". Ciascuna $\mu_i$ viene quindi pesata automaticamente in modo proporzionale alla confidenza $\Sigma_i^{-1}$.
+\end{itemize}
+  Il centroide sinistro \`e generalmente una fusione pi\`u accurata dell'informazione.
+  \textbf{N.B:} In letteratura questa regola di fusione per gaussiane prende il nome di \href{https://en.wikipedia.org/wiki/Covariance_intersection}{\textit{covariance intersection}}.
+  Se definiamo per ogni gaussiana due quantit\`a $\Omega_i = \Sigma_i^{-1}$ e $\omega_i = \Sigma_i^{-1} \mu_i$ che prendono il nome di matrice e vettore di informazione si ha che per la gaussiana fusa $\bar{p}_s(x)$ vale infine
+  \begin{align}
+  &\bar{\Omega} = \bar{\Sigma}^{-1} = \pi_1 \Omega_1 + \dots + \pi_N \Omega_N \\
+  &\bar{\omega} = \bar{\Sigma}^{-1} \bar{\mu} = \pi_1 \omega_1 + \dots + \pi_N \omega_N
+  \end{align}
+  
+\subsection{Elementi di Stima Bayesiana}
+Supponendo di essere interessati a stimare una quantit\`a di interesse $x$ si ha che, una volta ottenuto $y$ a partire da un processo di misura/osservazione di $x$ su un canale di misura, si vanno ad applicare delle tecniche di stima bayesiana (su $y$) al fine di ottenere la pdf condizionata $p(x|y)$. 
+\begin{center}
+\begin{tikzpicture}[node distance=2cm,auto,>=latex']
+    \node (a) [left of=b] {$x$};
+    \node [int] (b) [right of=a,node distance=2cm] {Misura};
+    \node (c) [right of=b,node distance=2cm] {$y$};
+    \node [int] (d) [right of=c,node distance=3cm] {Stima Bayesiana};
+    \node (e) [right of=d,node distance=3cm] {$p(x|y)$};
+    \path[->] (a) edge node {} (b);
+    \path[->] (b) edge node {} (c);
+    \path[->] (c) edge node {} (d);
+    \path[->] (d) edge node {} (e);
+\end{tikzpicture}
+\end{center}
+In generale in questo contesto si ha quindi accesso ad una misurazione $y$ e ad una pdf a priori $p(x)$, che riassume l'informazione su $x$ disponibile prima dell'osservazione (si pensi ad esempio al monitoraggio di un'automobile: sapremo che la sua posizione sar\`a a terra e probabilmente nella carreggiata, e che la sua velocit\`a sar\`a compresa in un certo range). Oltre a questi due elementi abbiamo anche un modello per il canale di misura, rappresentato dalla funzione di verosimiglianza $p(y|x)$. \\
+Il nostro obiettivo \`e quello di calcolare $p(x|y)$: dal teorema di Bayes
+\begin{equation}
+p(x,y) = p(x|y)p(y) = p(y|x)p(x)
+\end{equation} si ha
+\begin{equation}
+p(x|y) = \frac{p(y|x)p(x)}{p(y)}
+\end{equation} da cui, essendo
+\begin{equation}
+p(y) = \int p(x,y) dx = \int p(y|x)p(x) dx
+\end{equation} vale infine
+\begin{equation}
+p(x|y) = \frac{p(y|x)p(x)}{\int p(y|x)p(x)dx}
+\end{equation}
+Questo \`e il caso \textbf{statico}, volendo fare inferenza nel tempo si deve estendere in questo modo: supponiamo di avere un sistema dinamico tempo discreto
+\begin{equation}
+x(t+1) = f \big ( x(t), \xi(t), t \big)
+\end{equation} dove $\xi(t)$ \`e il disturbo di processo al tempo $t$ che modella l'incertezza nella transizione dallo stato $x(t)$ allo stato $x(t+1)$. Questa \`e una variabile aleatoria con pdf $p({\xi}(t))$. Si suppone che $\{\xi_i(t)\}$ sia una \textbf{sequenza bianca}, ovvero una sequenza di disturbi $\xi(0), \xi(1), \dots $ \`e formata da tutte variabili aleatorie indipendenti. Si ha quindi $p({\xi_1(t), \dots, \xi_n(t)} = p({\xi_1}(t)) p({\xi_2}(t)) \dots, p({\xi_n}(t))$. In questo modo stiamo assumendo che le realizzazioni passate del disturbo siano indipendenti dalle realizzazione future del processo (assunzione di Markov): data la pdf del disturbo $p_{\xi}(t)$ si pu\`o calcolare la \textbf{pdf di Markov}
+\begin{equation}
+\varphi (x(t+1) | x(t))
+\end{equation} ovvero la pdf che modella la probabilit\`a di passare dallo stato $x(t)$ allo stato $x(t+1)$.\\
+Oltre a questo abbiamo anche un'equazione di misura
+\begin{equation}
+y(t) = h \big ( x(t), \eta(t), t \big )
+\end{equation} dove $\eta(t)$ rappresenta l'errore di misura, che ci d\`a una rappresentazione matematica del canale di misura. Si suppone che anche $\{\eta_i(t)\}$ sia una sequenza bianca e che $\{\xi_i(t)\} \perp \{\eta_i(t)\}$ ovvero che le due incertezze siano indipendenti (incorrelate?) tra loro.
+Sotto queste ipotesi data la pdf del rumore $p({\eta}(t))$ si pu\`o definire la \textbf{pdf di verosimiglianza} 
+\begin{equation}
+g \big ( y(t)|x(t) \big )
+\end{equation}
+L'obiettivo della stima Bayesiana \`e quindi:
+date le osservazioni fino al tempo $t$, $y(0), y(1), \dots, y(t)$ calcolare la pdf a posteriori dello stato $x(t)$
+\begin{equation}
+p_{t|t}(x(t)) = p \big ( x(t) | y(0), \dots, y(t) \big )
+\end{equation} Nelle ipotesi fatte $p_{t|t}(x(t))$ si pu\`o calcolare ricorsivamente:
+\begin{equation}
+p_{t-1|t-1}(x(t-1)) = p \big ( x(t-1) | y(0), \dots, y(t-1) \big) g \big ( y(t)|y(t-1) \big )
+\end{equation} eseguendo la predizione con la pdf di Markov $\varphi (x(t+1) | x(t))$ e ottenendo la pdf predettta
+\begin{equation}
+p_{t|t-1} (x(t)) = p(x(t)|y(0), \dots, y(t-1))
+\end{equation}
+Da qui, attraverso la verosimiglianza $g(y(t)|x(t))$ si ottiene $y(t)$ e con il teorema di Bayes si calcola la pdf di correzione
+\begin{equation}
+p_{t|t}(x(t)) = p(x(t)|y(0), \dots, y(t))
+\end{equation}

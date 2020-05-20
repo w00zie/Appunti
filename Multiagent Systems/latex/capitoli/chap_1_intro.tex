@@ -1,0 +1,230 @@
+\section{Introduzione ai Sistemi Multi-Agente}
+\subsection{Definizioni principali}
+Partiamo dal concetto di \textbf{agente}: per agente si intende qualunque elemento che interagisce con l'ambiente in cui si trova e \textit{prende decisioni} in modo \textit{autonomo}.\\
+L'agente riceve informazioni dall'\textit{ambiente} (per esempio attraverso dei sensori) ed agisce su di esso mediante degli attuatori. Questo paradigma \`e del tutto generale e gli agenti possono anche essere completamente virtuali.
+
+L'interazione tra agente e ambiente \`e descritta da un sistema dinamico:
+\begin{equation}
+\begin{cases}
+x(t+1) = f(x(t), u(t)) \\
+y(t) = h(x(t))
+\end{cases}
+\end{equation}
+in cui $x(t)$ \`e lo \textbf{stato complessivo} al tempo $t$ e $u(t)$ \`e la \textbf{decisione/azione} intrapresa dall'agente al tempo $t$. \\
+Per \textit{stato} si intende la configurazione in cui si trova il sistema agente/ambiente, inoltre $y(t)$ rappresenta l'informazione (dati) raccolta dall'agente (sempre al tempo $t$) mediante un qualche processo di misura.
+
+Si ha che $x(t) \in \mathbb{X}$ in cui $\mathbb{X}$ prende il nome di \textbf{spazio di stato}. Questo pu\`o essere un insieme continuo o discreto. La stessa cosa avviene per le azioni $u(t) \in \mathbb{U}$ in cui $\mathbb{U}$ prende il nome di \textbf{spazio delle decisioni/azioni} e anche questo pu\`o essere uno spazio continuo o discreto. \\
+In generale questi due insiemi possono anche essere ibridi, si pensi infatti all'azione di guidare una macchina: si ha un'azione definita su uno spazio continuo dato dalla manovrazione del volante e un'azione discreta sul cambio della marcia.
+
+Noi siamo interessati ad \textbf{\textit{agenti intelligenti}}, ovvero agenti che devono soddisfare certe propriet\`a:
+\begin{itemize}
+\item \textit{Autonomia}: l'agente deve avere controllo totale sulle proprie decisioni.
+\item \textit{Utilit\`a}: l'agente agisce in modo da perseguire un certo \textit{obiettivo}.
+\item \textit{Apprendimento}: l'agente \'e in grado di \textit{imparare} dal passato.
+\end{itemize}
+
+Definiamo un \textbf{vettore informativo}: 
+\begin{equation}
+    I(t) \coloneqq \begin{bmatrix}
+y(0) \\
+u(0) \\
+y(1) \\
+\vdots \\
+u(t-1) \\
+y(t)
+\end{bmatrix}
+\end{equation}
+
+che rappresenta tutta l'informazione disponibile al tempo $t$. 
+La decisione su quale azione applicare al tempo $t$ dipende quindi da:
+\begin{itemize}
+    \item Informazione disponibile $I(t)$.
+    \item Obiettivo da perseguire.
+\end{itemize} 
+Si ha quindi che l'azione/decisione prende la forma della cosiddetta \textit{legge di controllo dell'agente} (scelta sulla base dell'obiettivo), che si pu\`o esprimere matematicamente come
+\begin{equation}
+u(t) = \gamma(t, I(t))
+\end{equation}
+Come si definisce l'obiettivo dell'agente? Possiamo farlo attraverso tre step:
+\begin{enumerate}
+\item La definizione di un insieme $\mathbb{S} \subset \mathbb{X}$ di \textit{configurazioni desiderate}, ovvero un insieme che deve rappresentare l'obiettivo di raggiungimento di una particolare configurazione presente nello spazio di stato (es. vincere una partita di tennis, essere promosso all'esame...). 
+
+\item La definizione (se necessaria) anche di un insieme $\mathbb{V} \subseteq \mathbb{X}$ detto \textit{delle configurazioni ammissibili} (o dei vincoli) che il nostro agente deve soddisfare (es. restare all'interno della carreggiata in un sistema di guida autonoma...). Supponendo $x(0) \in \mathbb{V}$ si vuole che $x(t) \in \mathbb{V}, \forall t$.
+
+\item La definizione di una \textit{funzione obiettivo da massimizzare} (o, equivalentemente, di una funzione di costo da minimizzare) 
+   \begin{equation}
+    r(t, x(t), u(t))
+   \end{equation}
+    che rappresenta il \textbf{reward} (ricompensa) \textit{istantaneo} che si ottiene al tempo $t$ partendo dallo stato $x(t)$ e applicando l'azione $u(t)$.
+\end{enumerate}
+L'obiettivo da massimizzare sar\`a quindi un qualcosa tipo\footnote{Utilizzando una sommatoria il problema diventa trattabile, ma non \`e l'unica possibilit\`a.}:
+\begin{equation}
+\sum_{t=0}^T r(t, x(t), u(t))
+\end{equation}
+in cui $T$ prende il nome di orizzonte di controllo (il quale pu\`o anche essere $\infty$: in questo caso per poter definire correttamente questa quantit\`a si dovr\`a richiedere la convergenza della serie).
+\begin{center}
+\begin{tikzpicture}[scale=1.2,transform shape]
+\node[set,fill=blue!20,text width=3.5cm,label={[below=85pt of vin]$\mathbb{V}$}] 
+  (stat) at (0,-0.4)  (vin) {};
+\node[set,fill=red!20,text width=1.5cm,label={[above=-1pt of amm]$\mathbb{S}$}] 
+  (amm) at (0,-0.2)  {};
+ \node (x) at (-0.8,-1.4) {\small{$x(0)$}};
+ \node (y) at (0,-0.3) {};
+ \path[->] (x) edge node {} (y);
+\end{tikzpicture}
+\end{center}
+Facciamo un po' di \textbf{osservazioni}: in questo modello le transizioni sono \textit{deterministiche}. In molti casi (la maggioranza) le transizioni sono incerte e si possono considerare delle variazioni:
+\begin{itemize}
+\item Modelli con \textbf{disturbo}: 
+    \begin{equation}
+    \begin{cases}
+    x(t+1) = f(x(t), u(t), \xi(t)) \\
+    y(t) = h(x(t), \eta(t))
+    \end{cases}
+    \end{equation} 
+    in cui i processi stocastici $\xi(t)$ ed $\eta(t)$ prendono, rispettivamente, il nome di \textit{disturbo di processo} e \textit{rumore di misura} al tempo $t$.
+\item Modelli \textbf{probabilistici}: si definisce una \textit{densit\`a di probabilit\`a} di transizione: 
+   \begin{equation}
+   \begin{cases}
+   \varphi ( x(t+1)| x(t), u(t)  ) \\
+   g (y(t) | x(t) )
+   \end{cases}
+   \end{equation} 
+   in cui $\varphi(\cdot | \cdot)$ rappresenta\footnote{Questa prende solitamente il nome di \textit{pdf} di transizione di Markov.} la probabilit\`a di trovarsi nello stato $x(t+1)$ quando si effettua l'azione $u(t)$ partendo dallo stato $x(t)$ mentre $g(\cdot|\cdot)$ (la funzione di verosimiglianza) rappresenta la probabilit\`a
+   di ricevere l'osservazione $y(t)$ quando lo stato in cui si trova l'agente \`e $x(t)$.
+\end{itemize}
+Inoltre per sistemi con spazio di stato continuo si possono avere modelli di transizione a tempo continuo:
+\begin{equation}
+\dot{x} = f(x(t), u(t))
+\end{equation}
+
+\subsection{Sistema Multi-Agente}
+\defn{\textit{Sistema multi-agente:}}Un sistema multi-agente \`e un sistema in cui $N>1$ agenti interagiscono tra loro e con l'ambiente prendendo decisioni in modo \textbf{autonomo} e \textbf{indipendente}.\\
+Dal punto di vista matematico si ha:
+\begin{equation}
+\label{eqn:mag}
+    \begin{cases}
+    x(t+1) = f(x(t), u_1(t), \dots, u_N(t)) \\
+    y_i(t) = h_i(x(t)), & i \in \{1, \dots, N \}
+\end{cases}
+\end{equation}
+
+in cui $u_i(t)$ rappresenta l'azione/decisione dell'agente $i$ al tempo $t$ cosi come $y_i(t)$ l'informazione/dati ricevuti da $i$ al tempo $t$.
+
+Ogni agente $i$-esimo ha anche un vettore di informazione disponibile $I_i(t)$ ed ogni agente ha i suoi obiettivi, che possono essere definiti, come prima, in termini di:
+\begin{itemize}
+\item $\mathbb{S}_i \subset \mathbb{X}$: Le configurazioni desiderate dall'agente $i$.
+\item $\mathbb{V}_i \subseteq \mathbb{X}$: Le configurazioni ammissibili per l'agente $i$.
+\item $r_i(t, x(t), u_1(t), \dots, u_N(t))$: Il reward dell'agente $i$-esimo (che in generale dipende anche dalle decisioni degli altri agenti, che non conosce): pu\`o essere scritto in modo pi\`u preciso come $r_i(t, x(t), u_i(t), x(t+1)$, ma la sua definizione dipende dal contesto ogni volta.
+\end{itemize}
+La decisione $u_i(t)$ dipende poi dall'informazione locale e dall'obiettivo dell'agente $i$:
+\begin{equation}
+    u_i(t) = \gamma_i(t, I_i(t))
+\end{equation}
+e questo rappresenta un problema di controllo intrinsecamente \textbf{distribuito/decentralizzato} dal momento che ogni agente decide in modo \textbf{indipendente}.
+
+Tra le tipologie di sistemi multi-agenti possiamo avere:
+\begin{itemize}
+\item Sistemi \textit{cooperativi}, in cui gli agenti hanno gli stessi obiettivi:
+  \begin{equation}
+  \mathbb{S}_i = \mathbb{S}, \mathbb{V}_i = \mathbb{V}, r_i = r, \qquad \forall i
+  \end{equation}
+\item Sistemi \textit{competitivi}, in cui gli agenti hanno obiettivi incompatibili/contrastanti:
+  \begin{equation}
+  \mathbb{S}_i \cap \mathbb{S}_j = \emptyset, \qquad \forall i \neq j
+  \end{equation}
+\item Sistemi \textit{misti}: una tipologia intermedia tra i due estremi di cooperazione totale e competizione totale.
+\end{itemize}
+Si pu\`o poi definire una classe di sistemi multi-agente ovvero i SMA a \textbf{struttura disaccoppiata}: questi sono i sistemi in cui si pu\`o decomporre la transizione complessiva \ref{eqn:mag} in $N$ transizioni
+\begin{equation}
+    x_i(t+1) = f_i(x_i(t), u_i(t)), \qquad \forall i = 1, \dots, N
+\end{equation}
+ovvero quei sistemi in cui lo stato complessivo si pu\`o decomporre in tante parti ed ogni agente agisce solamente su una di esse. Si pu\`o poi definire un vettore di stato collettivo:
+\begin{equation}
+    x(t) = \begin{bmatrix}
+    x_1(t) \\
+    \vdots \\
+    x_N(t)
+    \end{bmatrix}
+\end{equation}
+
+in cui l'agente $i$-esimo agisce solo sul sottostato $x_i(t)$. In questo caso non si ha interazione diretta ma resta un problema multiagente nel senso in cui l'obiettivo dipende dallo stato collettivo. Si ha comunque accoppiamento in termini di:
+\begin{itemize}
+    \item Informazione disponibile all'agente $i$.
+    \item Obiettivo collettivo relativo a $x(t)$.
+\end{itemize}
+Tipicamente quindi si suppone che ogni agente $i$ abbia informazioni:
+\begin{itemize}
+    \item Sul proprio stato $x_i(t)$.
+    \item Sullo stato di un certo numero $n_i \subseteq \{1, \dots, N \}$ di agenti vicini in cui
+  \begin{equation}
+  y_i(t) = \begin{bmatrix}
+  x_i(t) \\
+  x_j(t), \quad j \in n_i
+  \end{bmatrix}
+  \end{equation}
+\end{itemize}
+
+\begin{mybox}[breakable]{green}{\exmp{\textit{Controllo di formazione}}}
+Abbiamo un sistema del tipo
+\begin{equation}
+\begin{cases}
+x_i(t) : \text{posizione del robot $i$ al tempo $t$} \\
+x_i(t+1) = x_i(t) + T_s u_i(t)
+\end{cases}
+\end{equation}
+in cui $T_s$ \`e il tempo di campionamento e $u_i(t)$ la velocit\`a del robot $i$ al tempo $t$.
+
+In questo caso l'obiettivo pu\`o essere portare il sistema multi-robot in una formazione desiderata espressa, ad esempio, in termini di distanze relative desiderate:
+\begin{equation}
+\mathbb{S} = \{ x(t): ||x_i(t) - x_j(t)|| = \delta_{ij}, \quad \forall i,j \}
+\end{equation}
+in cui $\delta_{ij}$ \`e la distanza desiderata relativa tra i robot $i$ e $j$.
+\begin{center}
+    \begin{tikzpicture}[-, >=stealth', auto, semithick, node distance=3cm]
+    \tikzstyle{every state}=[fill=white,draw=black,thick,text=black,scale=1]
+    \node[shape=circle,draw=black] (A) at (0,0) {};
+    \node[shape=circle,draw=black] (B) at (-1,-0.7) {};
+    \node[shape=circle,draw=black] (C) at (-1,1) {};
+    \node[shape=circle,draw=black] (D) at (1.2,-1) {};
+    \node[shape=circle,draw=black] (E) at (1.5,0.5) {};
+    
+    \node[shape=circle,draw=black] (1) at (7.5,0) {};
+    \node[shape=circle,draw=black] (2) at (5.5,1) {};
+    \node[shape=circle,draw=black] (3) at (6.5,0.75) {};
+    \node[shape=circle,draw=black] (4) at (5.5,-1) {};
+    \node[shape=circle,draw=black] (5) at (6.5,-0.75) {};
+    \node (F) at (3,0) {};
+    \node (G) at (4,0) {};
+    \path[->] (F) edge node {} (G);
+    \path (4) edge[style=dashed] node[align=center] {$\delta_{ij}$} (5);
+    \end{tikzpicture}
+\end{center}
+Tipicamente ogni robot ha informazione:
+\begin{itemize}
+    \item Sulla sua posizione $x_i(t)$.
+    \item Sulla posizione dei robot che si trovano a una certa distanza di comunicazione $\rho$.
+\end{itemize}
+In questo caso quindi l'insieme dei vicini (per il robot $i$) pu\`o essere definito come:
+\begin{equation}
+    n_i(t) = \{ j \neq i: ||x_i(t) - x_j(t)|| \leq \rho \}
+\end{equation}
+\end{mybox}
+
+\begin{mybox}[breakable]{green}{\exmp{\textit{Calcolo distribuito della media}}}
+
+Supponiamo di avere $N$ centri di calcolo interconnessi tra loro in qualche modo. Il modello \`e molto semplice: 
+\begin{equation}
+    x_i(t+1) = u_i(t)
+\end{equation}
+In cui $x_i(t)$ rappresenta un certo valore presente in memoria, al tempo $t$, nel centro di calcolo $i$ mentre $u(t)$ rappresenta il nuovo valore, calcolato al tempo $t$.
+
+Si parte da uno stato iniziale $\{x_1(0), x_2(0), \dots, x_N(0)\}$, che pu\`o essere ad esempio una misurazione effettuata (separatamente in ogni centro di calcolo) del quale si vuole calcolare la media distribuita. Ogni agente pu\`o inoltre comunicare con un insieme di $n_i$ di agenti vicini. L'obiettivo pu\`o essere quindi definito come:
+\begin{equation}
+    \mathbb{S} = \{x(t): x_i(t) = \bar{x}, \quad \forall i \}
+\end{equation}
+in cui $\bar{x}$ rappresenta la media:
+\begin{equation}
+    \bar{x} = \frac{1}{N} \sum_{i=1}^N x_i(0)
+\end{equation}
+\end{mybox}

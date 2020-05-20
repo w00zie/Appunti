@@ -1,0 +1,122 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{multirow,booktabs}
+\usepackage[italian]{babel}
+\usepackage[table, dvipsnames]{xcolor}
+\usepackage{fullpage}
+\usepackage{lastpage}
+\usepackage{enumitem}
+\usepackage{glossaries}
+\usepackage{fancyhdr}
+\usepackage{mdframed}
+\usepackage{float}
+\usepackage{mathrsfs}
+\usepackage{subfig}
+\usepackage{tabularx}
+\usepackage{wrapfig}
+\usepackage{setspace}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{calc}
+\usepackage{multicol}
+\usepackage{cancel}
+\usepackage[retainorgcmds]{IEEEtrantools}
+\usepackage[margin=3cm]{geometry}
+\usepackage{amsmath}
+\newlength{\tabcont}
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.05in}
+\usepackage{empheq}
+\usepackage{framed}
+\usepackage{caption}
+\usepackage[subfigure]{tocloft}
+\usepackage[most]{tcolorbox}
+\usepackage{xcolor}
+\usepackage[toc,page]{appendix}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
+\usepackage{tikz}
+\usetikzlibrary{automata,arrows,positioning,calc}
+\usetikzlibrary{decorations.pathreplacing,angles,quotes,bending}
+\usepackage{hyperref}
+
+\tikzset{set/.style={draw,circle,inner sep=0pt,align=center}}
+\tikzstyle{block} = [draw, fill=blue!20, rectangle, 
+    minimum height=3em, minimum width=6em]
+\tikzstyle{sum} = [draw, fill=blue!20, circle, node distance=1cm]
+\tikzstyle{input} = [coordinate]
+\tikzstyle{output} = [coordinate]
+\tikzstyle{pinstyle} = [pin edge={to-,thin,black}]
+\tikzstyle{int}=[draw, fill=blue!20, minimum size=2em]
+\tikzstyle{init} = [pin edge={to-,thin,black}]
+
+\hypersetup{
+  colorlinks   = true, %Colours links instead of ugly boxes
+  urlcolor     = red, %Colour for external hyperlinks
+  linkcolor    = blue, %Colour of internal links
+  citecolor   = red %Colour of citations
+}
+
+\colorlet{shadecolor}{orange!15}
+\parindent 0in
+\parskip 10pt
+\geometry{margin=1in, headsep=0.25in}
+\theoremstyle{definition}
+\newtheorem{defn}{Definizione}
+\newmdtheoremenv{theo}{Teorema}
+\newtheorem{reg}{Regola}
+\newtheorem{exmp}{Esempio}[section]
+\newtheorem{exer}{Esercizio}
+\newtheorem{note}{Nota}
+
+\setlength\cftparskip{-2pt}
+\setlength\cftbeforesecskip{1pt}
+\setlength\cftaftertoctitleskip{2pt}
+\newtcolorbox{mybox}[3][]
+{
+  colframe = #2!25,
+  colback  = #2!10,
+  coltitle = #2!20!black,  
+  title    = {#3},
+  #1,
+  frame hidden,
+}
+
+\numberwithin{equation}{subsection}
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+\newcommand{\lap}{\ensuremath{\mathsf{L}}}
+\newcommand{\val}{\ensuremath{\mathcal{V}}}
+
+\begin{document}
+\setcounter{section}{0}
+
+\thispagestyle{empty}
+
+\begin{center}
+{\LARGE \bf Appunti di Sistemi Multiagente}\\
+{\large \textit{Giovanni Bindi}} \\
+{Universit\`a degli Studi di Firenze}
+\end{center}
+
+\tableofcontents
+
+\newpage
+\input{capitoli/chap_1_intro.tex}
+
+\newpage
+\input{capitoli/chap_2_grafi.tex}
+
+\newpage
+\input{capitoli/chap_3_sinc.tex}
+
+\newpage
+\input{capitoli/chap_4_robot.tex}
+
+\newpage
+\input{capitoli/chap_5_fusione.tex}
+
+\newpage
+\input{capitoli/chap_6_reinforcement.tex}
+
+\end{document} 

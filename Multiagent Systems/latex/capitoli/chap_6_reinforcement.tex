@@ -1,0 +1,560 @@
+\section{Reinforcement Learning}
+Consideriamo un sistema dinamico stocastico che modella l'interazione tra agente e ambiente
+\begin{equation}
+x(t+1) = f \big ( x(t), u(t), \xi(t) \big )
+\end{equation} dove $\xi(t)$ \`e una variabile aleatoria che modella, come prima, l'incertezza sulla transizione tra $x(t)$ e $x(t+1)$. Invece $u(t)$ rappresenta il segnale di controllo/decisione/azione (deterministico) operato al tempo $t$. Facciamo le seguenti ipotesi (di \textit{informazione completa}):
+\begin{enumerate}
+\item $\{ \xi(t) \}$ \`e una sequenza bianca.
+\item $p(\xi(t))$ \`e nota.
+\item Lo stato $x(t)$ \`e accessibile/misurabile.
+\end{enumerate}
+
+\textbf{N.B:} Sotto queste ipotesi si pu\`o definire la pdf di Markov di transizione dello stato (che ora dipende ovviamente anche da $u(t)$) 
+\begin{equation}
+\varphi \big ( x(t+1) | x(t), u(t) \big )
+\end{equation} Questa ci dice la probabilit\`a che lo stato al tempo $t+1$ sia $x(t+1)$ dato che lo stato al tempo t sia $x(t)$ a cui si applica l'azione $u(t)$.\\
+Consideriamo ora un problema di controllo/decisione su un orizzonte (intervallo di tempo) finito $T$ e si suppone di avere una funzione obiettivo da massimizzare
+\begin{equation}
+\val = \mathbb{E}_{\xi} \Bigg [ \sum_{t=0}^{T-1} r \Big (t, x(t), u(t)) \Big ) + r(T, x(t)) \Bigg ]
+\end{equation} in cui il primo termine prende il nome di \textbf{reward istantaneo} e il secondo quello di \textbf{reward finale} (che spesso \`e il pi\`u importante). Il valore atteso viene fatto sulla pdf $p(\xi(t))$. Il nostro obiettivo sar\`a determinare le tecniche per andare a risolvere questo tipo di problema.
+
+\subsection{Programmazione dinamica}
+
+Prima idea della programmazione dinamica: separare il passato dal futuro. Se abbiamo un problema di decisione su un orizzonte finito $T$, invece che considerare tutto l'orizzonte ci si restringe ad un ipotesi: detto $t \in [0,T]$ si suppone di essere nello stato $x(t)$ e, dal momento che il passato \`e passato, possiamo concentrarci solo sulle decisioni da prendere da $t$ in poi, ovvero sul reward parziale da $t$ in poi associato a una certa legge di controllo
+\begin{equation}
+u(\tau) = \gamma (x(\tau), \tau)
+\end{equation}
+con $\tau \geq t$. Si riscrive quindi il reward come
+\begin{equation}
+\val^{\gamma}(x(t),t) = \mathbb{E}_{\xi(\tau), \tau \geq t} \Big \{ \sum_{\tau=t}^{T-1} r (\tau, x(\tau), u(\tau)) + r(T, x(T)) \Big \}_{u(\tau) =\gamma(x(\tau), \tau)}
+\end{equation} e quindi come
+\begin{equation}
+\val^{\gamma}(x(t),t) = \mathbb{E}_{\xi(\tau), \tau \geq t} \Big \{ \sum_{\tau=t}^{T-1} r (\tau, x(\tau), \gamma(x(\tau), \tau)) + r(T, x(T)) \Big \}
+\end{equation}
+\textbf{N.B:} Possiamo separare passato e futuro perche abbiamo supposto la sequenza di disturbo $\{ \xi(t) \}$ sia una \textit{sequenza bianca}, il che implica che i disturbi futuri $\xi(t), \xi(t+1), \dots$ siano indipendenti dai passati $\xi(0), \xi(1), \dots, \xi(t-1)$. La cosa importante \`e che \textbf{tutto il passato \`e riassunto in} $x(t)$, ovvero nello stato/configurazione in cui ci si trova.
+A questo punto si definisce il reward parziale ottimo associato alla policy ottima
+\begin{equation}
+u(t) = \gamma^o (x(t), t)
+\end{equation} e il reward complessivo (massimizzato prendendo ad ogni istante la decisione ottima)
+\begin{align}
+\val^o(x(t),t) = \val^{\gamma^o}(x(t), t) = \\
+= \max_{u(t)} \mathbb{E}_{\xi(t)} \max_{u(t+1)} \mathbb{E}_{\xi(t+1)} \dots \max_{u(T-1)} \mathbb{E}_{\xi(T-1)} \Big \{ \sum_{\tau=t}^{T-1} r (\tau, x(\tau), \gamma(x(\tau), \tau)) + r(T, x(T)) \Big \}
+\end{align} \textbf{N.B:} L'alternanza tra $\max$ e $\mathbb{E}$ riflette la temporizzazione delle decisioni: al tempo $t$ non si prendono tutte le decisioni fino a $T$ ma semplicemente si prende la decisione migliore per arrivare al prossimo step (e le prossime decisioni verranno prese nel futuro).
+
+La seconda idea \`e separare il presente e futuro: al tempo $t$ si deve decidere solo $u(t)$:
+\begin{align}
+\val^o(x(t), t) = \max_{u(t)} \mathbb{E}_{\xi(t)} \dots \mathbb{E}_{\xi(T-1)} \Big \{ r(t, x(t), u(t)) + \sum_{\tau=t+1}^{T-1} r(\tau, x(\tau), u(\tau)) + r(T, x(T)) \Big \} = \\
+= \max_{u(t)} \Big \{ r(t, x(t), u(t)) + \mathbb{E}_{\xi(t)} \max_{u(t+1)} \dots \Big [ \sum_{\tau=t+1}^{T-1} r(\tau, x(\tau), u(\tau)) + r(T, x(t)) \Big ] \Big \} = \\
+= \max_{u(t)} \Big \{ r(t, x(t), u(t)) + \mathbb{E}_{\xi(t)} \val^o(x(t+1),t+1) \Big \}
+\end{align} che prende il nome di \textbf{Equazione di Bellman} della programmazione dinamica. \`E un'equazione ricorsiva che dice che il reward ottimo parziale da $t$ in poi si ottiene massimizzando il reward istantaneo sommato al valore atteso del reward ottimo futuro. La massimizzazione ci permette quindi di trovare il valore del reward ottimo ma anche ovviamente di identificare la decisione ottima
+\begin{equation}
+\gamma^o (x(t), t) = \arg \max_{u(t)} \Big \{ r(t, x(t), u(t)) + \mathbb{E}_{\xi(t)} \val^o (x(t+1), t+1) \Big \}
+\end{equation} \textbf{N.B:} Si considera il reward ottimo da $t+1$ in poi mediando rispetto alla transizione incerta da $t$ a $t+1$.
+Per calcolare $\val^o(x(t), T), \gamma^o(x(t),t)$ si deve conoscere quindi $\val^o(x(t+1),t+1), \forall x(t+1)$. \`E possibile? Nel contesto in cui ci siamo messi s\`i: essendo quella di Bellman un'equazione ricorsiva possiamo calcolare i $\val^o(x(t),t)$ procedendo ricorsivamente \textbf{indietro nel tempo}. \\
+\textit{La programmazione dinamica si divide quindi in due fasi:}
+\begin{enumerate}
+\item \textbf{Fase backward} di sintesi della policy (da svolgersi off-line):
+  \begin{align}
+    &\val^o(x(t), t) = \max_{u(t)} \Big \{ r(t, x(t), u(t)) + \mathbb{E}_{\xi(t)} \val^o(x(t+1),t+1) \Big \} \\
+    &\gamma^o (x(t), t) = \arg \max_{u(t)} \Big \{ r(t, x(t), u(t)) + \mathbb{E}_{\xi(t)} \val^o (x(t+1), t+1) \Big \}
+  \end{align} per $t=T-1, T-2, \dots, 0$ con l'inizializzazione $\val^o(x(T),T) = r(x(T), T)$ al reward finale (che si ottiene alla fine, quando si arriva nello stato $x(T)$).
+\item \textbf{Fase forward} di applicazione della policy (da svolgersi on-line):
+  \begin{equation}
+    u(t) = \gamma^o(x(t), t)
+  \end{equation} per $t=0, 1, \dots, T-1$ (via via che si giunge negli stati).
+\end{enumerate}
+\begin{center}
+\begin{tikzpicture}[->,node distance=1.5cm,auto,>=latex']
+    \node (a) {$f(x(t),u(t),\xi(t))$};
+    \node (b) [int,right of=a,node distance=3cm] {PD};
+    \node (c) [above of=b] {$r(t,x(t),u(t))$};
+    \node (d) [right of=b,node distance=2cm] {$r(T,x(T))$};
+    \node (e) [int,below of=b,node distance=2cm] {$\gamma^o(x(t),t)$};
+    \node (f) [int,right of=e,node distance=3cm] {Sistema};
+    \node (g) [right of=f,node distance=3cm] {$x(t)$};
+    \node (h) [below of=f,node distance=2cm] {$\xi(t)$};
+    \draw[red, dashed] (-1,-1) -- (7.5,-1) node[below] {\textit{on-line}} node[above] {\textit{off-line}};
+    \draw (a) -- node {} (b);
+    \draw (c) -- node {} (b);
+    \draw (d) -- node {} (b);
+    \draw (b) -- node {} (e);
+    \draw (e) -- node {$u(t)$} (f);
+    \draw (f) -- node {} (g);
+    \draw (h) -- node {} (f);
+\end{tikzpicture}
+\end{center}
+\textbf{N.B:} Nella fase backward si devono calcolare $\val^o, \gamma^o$ per ogni possibile stato $x(t) \in \mathbb{X}$ (spazio degli stati). \`E questa la difficolt\`a enorme della progrmmazione dinamica! Bisogna distinguere quindi alcuni casi applicabili:
+\begin{itemize}
+\item $\mathbb{X}$ discreto di cardinalit\`a bassa/moderata (compatibile con le capacit\`a di calcolo disponibile): Si pu\`o applicare la programmazione dinamica in modo esatto memorizzando $\forall t, \forall x(t)$ i valori $\val^o(x(t),t), \gamma^o(x(t), t)$.
+\item $\mathbb{X}$ insieme continuo in cui per\`o si riesce a calcolare $\val^o(x(t), t)$ e $\gamma^o(x(t),t)$ in modo esatto (es. controllo ottimo lineare quadratico)
+\item $\mathbb{X}$ insieme continuo che pu\`o essere discretizzato in modo efficae (es. pianificazione di traiettoria di un robot in un ambiente statico) in cui si pu\`o discretizzare anche $\mathbb{U}$ spazio delle decisioni.
+\end{itemize}
+In generale quando $\mathbb{X}$ \`e uno spazio ad alta dimensione si incorre nella cosiddetta \href{https://en.wikipedia.org/wiki/Curse_of_dimensionality}\textbf{curse of dimensionality}, per cui la fase backward risulta computazionalmente impraticabile e si rende quindi necessaria un'approssimazione. Viene assegnata alla value function $\val^o(x(t),t)$ una struttura prefissata (es. una rete neurale) in cui si va a ottimizzare un vettore di parametri $w(t)$
+\begin{equation}
+\val^o(x(t),t) \approx \tilde{\val}(x(t),w(t))
+\end{equation} 
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm,auto,>=latex']
+    \node [int] (a) {ANN};
+    \node (b) [left of=a,node distance=3cm] {$x(t)$};
+    \node (c) [right of=a,node distance=3cm] {$\tilde{\val}(x(t),w(t))$};
+    \node (d) [below of=a] {$w(t)$};
+    \path[->] (b) edge node {} (a);
+    \path[->] (d) edge node {} (a);
+    \path[->] (a) edge node {} (c);
+\end{tikzpicture}
+\end{center}
+Come si fa la programmazione dinmanica approssimata su orizzone finito?
+Per ogni $t=T-1, \dots, 0$
+\begin{enumerate}
+\item Si genera casualmente un sottoinsieme di $K$ stati $x_1, \dots, x_K$
+\item Per ogni $x_k$ per $k=1,\dots, K$ si va ad applicare l'equazione della PD
+    \begin{equation}
+    \hat{\val}_k(t) = \max_{u(t)} \Big \{ r(t, x_k, u(t)) + \mathbb{E}_{\xi(t)} \tilde{\val}(x(t+1), w(t+1)) \Big \}
+    \end{equation} (supponendo, al tempo $t$, di avere gi\`a determinato i parametri $w(t+1)$).
+    \textbf{N.B:} Sapendo che $\val^o(x(T),T) = r(x(T),T)$ questo ci consente di inizializzare la ricorsione.
+\item Si risolve un problema di \textbf{regressione} determinando $w(t)$ in modo che 
+    \begin{equation}
+    \tilde{\val}(x_k, w(t)) \approx \hat{\val}_k(t), \quad k=1, \dots, N
+    \end{equation} in cui i dati sono le coppie (stato,valore)
+    \begin{equation}
+    (x_k, \hat{\val}_k(t)), \quad k=1, \dots, K
+    \end{equation}
+\end{enumerate}
+Per calcolare
+\begin{equation}
+\mathbb{E}_{\xi(t)} \tilde{\val}(x(t+1), w(t))
+\end{equation} con $x(t+1) = f(x_k, u(t), \xi(t))$ si pu\`o sfruttare la pdf di Markov
+\begin{equation}
+\varphi (x(t+1)|x_k, u(t))
+\end{equation} ottenendo
+\begin{equation}
+\mathbb{E}_{\xi(t)} \tilde{\val}(x(t+1), w(t)) = \begin{cases}
+\int \varphi(x(t+1)|x_k, u(t)) \tilde{\val}(x(t+1),w(t+1)) dx(t+1), & \text{$\mathbb{X}$ continuo} \\
+\sum_{x(t+1) \in \mathbb{X}} \varphi(x(t+1)|x_k, u(t)) \tilde{\val}(x(t+1),w(t+1)), & \text{$\mathbb{X}$ discreto}
+\end{cases}
+\end{equation} Se non riusciamo a fare i calcoli in modo esatto (e di solito non ci si riesce se gli stati sono tanti) si approssima mediante metodo Monte Carlo: si generano casualmente un certo numero di stati $x_{l,k}$ secondo la pdf $\varphi(x(t+1)|x_k, u(t))$ e si va ad approssimare
+\begin{equation}
+\mathbb{E}_{\xi(t)} \tilde{\val}(x(t+1)|w(t)) \approx \frac{1}{M} \sum_{m=1}^M \tilde{\val} (x_{m,l},w(t))
+\end{equation} Per calcolare poi la policy/legge di controllo ci sono due alternative
+\begin{enumerate}
+\item Se si riesce a fare il calcolo on-line (dipende dalla complessit\`a del problema) possiamo porre
+    \begin{equation}
+    u(t) = \arg \max_u \Big \{ r(t, x(t), u) + \mathbb{E}_{\xi(t)} \tilde{\val}(x(t+1), w(t+1)) \Big \}
+    \end{equation}
+\item Se non si riesce a calcolare $u(t)$ on-line allora possiamo addestrare off-line una policy approssimata (es. rete neurale), avendo quindi
+    \begin{equation}
+    u(t) = \tilde{\gamma}(x(t), \theta(t))
+    \end{equation} in cui $\theta(t)$ \`e il vettore dei parametri da ottimizzare per approssimare la policy ottima.
+\end{enumerate}
+Qual \`e la difficolt\`a? una sicuramente \`e il \textbf{tempo}, dovendo determinare $T$ funzioni approssimanti, una per ogni instante di tempo (se queste sono reti neurali...). La seconda difficolt\`a \`e che per determinare queste funzioni dobbiamo andare indietro nel tempo (si parte da $T$ e si usa questa approssimazione per calcolare quella a $T-1$ e cos\`i via fino a $t+1$), in questo modo l'errore di approssimazione si propaga.
+
+\subsection{Programmazione dinamica su orizzonte infinito}
+
+upponiamo quindi di non avere un tempo finale prefissato per il problema di decisione e si considera quindi un problema su orizzonte $\infty$. L'obiettivo \`e dato da
+\begin{equation}
+\mathbb{E}_{\xi(t)} \Big \{ \sum_{t=0}^\infty r(t, x(t), u(t)) \Big \}
+\end{equation} \textbf{N.B:} Non c'\`e il reward finale $r(x(T),T)$ dal momento che non c'e` un istante finale.
+Si deve garantire la convergenza della serie, una scelta tipica per garantire ci\`o \`e
+\begin{equation}
+r(t, x(t), u(t)) = \alpha^t r(x(t), u(t))
+\end{equation} con $\alpha \in (0,1]$ detto \textit{fattore di sconto}. Essendo un esponenziale tra 0 e 1 ci dice che i reward sono tanto meno importanti quanto piu sono lontani nel futuro. Matematicamente $\alpha < 1$ mi garantisce che la funzione obiettivo sia limitata quando $r(x(t),u(t))$ sono limitati, ovvero 
+\begin{equation}
+\exists C \in \mathbb{R} : |r(x(t),u(t))| \leq C, \quad \forall x(t), u(t)
+\end{equation} Il caso $\alpha = 1$ va bene solo in certi casi particolari quando con probabilit\`a 1 arrivo in tempo finito in un insieme di stati finali \textit{assorbenti} (da cui non posso uscire) con reward 0 (ovvero quando siamo certi che prima o poi si arriver\`a a una fine). Quando c'\`e il fattore di sconto $\alpha$ di solito si definisce la \textit{value function} in modo leggermente diverso: il \textbf{reward parziale} da $t$ in poi \`e dato da
+\begin{equation}
+\mathbb{E}_{\xi(s),s \geq t} \Big \{ \sum_{s=t}^\infty \alpha^s r(x(s),u(s)) \Big \} = \alpha^t \mathbb{E}_{\xi(s),s \geq t} \Big \{ \sum_{s=t}^\infty \alpha^{s-t} r(x(s),u(s)) \Big \}
+\end{equation} ovvero che inveche che iniziare a scontare dal tempo 0 si comincia a scontare dal tempo $t$ (al tempo $s=t$ pesa 1, a $s=t+1$ pesa $\alpha$, a $s=t+2$ pesa $\alpha^2$...) quindi il \textbf{reward potenziale ottimo} al tempo $t$ diventa
+\begin{align}
+\alpha^t \val^o(x(t),t) = \max_{u(t)} \Big \{ \underbrace{\alpha^t r(x(t),u(t))}_{\text{reward istantaneo}} + \alpha^{t+1}\val^o(x(t+1),t+1) \Big \} = \\
+\alpha^t \val^o (x(t),t) = \alpha^t \max_{u(t)} \Big \{ r(x(t),u(t)) + \mathbb{E}_{\xi(t)} \alpha \val^o (x(t+1), t+1) \Big \}
+\end{align} da cui ho l'\textbf{equazione della progarmmazione dinamica con fattore di sconto}
+\begin{equation}
+\val^o(x(t),t) = \max_{u(t)} \Big \{ r(x(t),u(t)) + \alpha \mathbb{E}_{\xi(t)} \val^o(x(t+1),t+1) \Big \}
+\end{equation}
+
+Per trovare la soluzione su orizzone \textbf{infinito} si considera il limite per $T\to \infty$ per un problema su orizzonte $T$ con obiettivo
+\begin{equation}
+\mathbb{E}_{\xi(t)} \Big \{ \sum_{t=0}^{T-1} \alpha^t r(x(t),u(t)) \Big \}
+\end{equation} Si definisce quindi la value function al tempo $t$ per un problema su orizzonte $T$ come $\val^T(x(t),t)$: tali valori sono calcolati ricorsivamente all'indietro (fase backward) per $t=T-1, T-2, \dots, 0$ partendo dall'inizializzazione
+\begin{equation}
+\val^T(x(T),T) = 0
+\end{equation} Sotto opportune ipotesi (es. $\mathbb{X}$ insieme discreto) tanto piu sono lontano dall'instante finale $T$ quanto pi\`u la value function $\val^T(x(t),t)$ (e di conseguenza anche la policy) tende ad essere \textbf{stazionaria} (indipendente dal tempo). Matematicamente
+\begin{equation}
+\lim_{T-t \to \infty} \val^T(x(t),t) = \val^o(x)
+\end{equation} si converge quindi a un valore stazionario. Quindi abbiamo un'equazione, nella fase backward
+\begin{equation}
+\val^T(x(t),t) = \max_{u(t)} \Big \{ r(x(t),u(t)) + \alpha \mathbb{E}_{\xi(t)} \val^T (x(t+1), t+1) \Big \}
+\end{equation} che converge a un punto stazionario calcolato come punto fisso della successione. Per calcolare il punto fisso si risolve
+\begin{equation}
+\val^T(x(t),t) = \val^o(x(t)), \quad \val^T(x(t+1),t+1) = \val^o(x(t+1))
+\end{equation} Il valore stazionario \`e la soluzione di
+\begin{equation}
+\val^o(x(t)) = \max_{u(t)} \Big \{ r(x(t),u(t)) + \alpha \mathbb{E}_{\xi(t)} \val^o(x(t+1)) \Big \}
+\end{equation} che prende il nome di \textbf{equazione stazionaria di Bellman} della programmazione dinamica. La policy \`e anch'essa stazionaria
+\begin{equation}
+\gamma^o(x(t)) = \arg \max_{u(t)} \Big \{ r(x(t),u(t)) + \alpha \mathbb{E}_{\xi(t)} \val^o(x(t+1)) \Big \}
+\end{equation}
+Come si calcola la soluzione stazionaria? Esistono due approcci fondamentalmente: \textit{\textbf{value iteration} e \textbf{policy iteration}}
+
+\subsection{Value Iteration}
+
+Si parte inizializzando la value function in modo arbitrario (non \`e necessaria l'inizializzazione a zero per la convergenza, cambia solo il tempo in cui si converge) ad esempio $\val_0(x) = 0$ e quindi per $k=1, \dots$ si pone, $\forall x(t) \in \mathbb{X}$
+\begin{equation}
+\val_k(x(t)) = \max_{u(t)} \Big \{ r(x(t),u(t)) + \alpha \mathbb{E}_{\xi(t)} \val_{k-1}(x(t+1)) \Big \}
+\end{equation} Una iterazione di \textit{value iteration} equivale a un passo della fase backward della programmazione dinamica: invece che indicizzarla con un indice $T$ all'indietro nel tempo si indicizza con un indice $k$ in avanti nel tempo. Sotto opportune ipotesi, come prima (es. $\mathbb{X}$ discreto), si ha
+\begin{equation}
+k \to \infty \implies \val_k(x(t)) \to \val^o(x(t))
+\end{equation} convergenza al valore stazionario, soluzione dell'equazione di Bellman per la PD stazionaria.
+\textbf{N.B:} Quando $T \to \infty$ ogni istante finito $t$ \`e infinitamente lontano dalla fine ed \`e questa la ragione per cui entra in gioco la stazionariet\`a. La \textbf{difficolt\`a} \`e legata al $\forall x(t) \in \mathbb{X}$, che per un numero di stati elevato diventa intrattabile. Quando la cardinalit\`a \`e troppo alta si va ad approssimare (es. con una rete neurale)
+\begin{equation}
+\val^o(x(t)) \approx \tilde{\val}(x(t),w)
+\end{equation} con $w$ vettore di parametri da determinare. Ad ogni iterazione $k$ si aggiorna il vettore $w$ calcolando $w_k$ in funzione di $w_{k-1}$: per $k=0,1,\dots$
+\begin{enumerate}
+\item Si generano casualmente $M$ stati $x_1, \dots, x_M$
+\item Per $m=1,\dots,M$ si calcola $\hat{\val}_{k,m} = \max_{u(t)} \Big \{ r(x_m, u(t)) + \alpha \mathbb{E}_{\xi(t)} \tilde{\val}(x(t+1)|w_{k-1}) \Big \} $
+\item Si risolve un problema di regressione determinando $w_k$ in modo tale che l'approssimazione sia vicina al valore campionario che si \`e calcolato
+    \begin{equation}
+    \tilde{\val}(x_m, w_k) \approx \hat{\val}_{k,m}, \quad m=1,\dots,M
+    \end{equation} sul training set $(x_m, \hat{\val}_{k,m})$. L'obiettivo \`e che per $k \to \infty$ si arriver\`a a convergere circa ai valori ottimi per gli stati
+    \begin{equation}
+    \tilde{\val}(x_, w_k) \to_\approx \val^o(x)
+    \end{equation}
+\end{enumerate}
+
+Nella value iterarion approssimata ad ogni iterazione (in cui si \`e generato un certo numero di stati, e quindi un certo numero di campioni) dobbiamo aggiornare i nostri parametri (es. ri-addestrando la rete neurale)
+\begin{equation}
+\val_k \approx \tilde{\val}(x, w_k)
+\end{equation} Per accelerare la convergenza:
+\begin{itemize}
+\item Nella discesa del gradiente per trovare $w_k$ posso partire da $w_{k+1}$
+\item Pu\`o essere utile considerare un termine di regolarizzazione del tipo
+    \begin{equation}
+    R(w) = ||w - w_{k-1}||^2
+    \end{equation}
+\end{itemize}
+
+La value iteration che abbiamo mostrato \`e una versione \textit{sincrona}: esiste una versione asincrona della value iteration approsimata in cui ogni volta che si genera \textbf{uno} stato (un campione) $x_k$ si aggiorna il vettore $w_k$. All'iterazione $k$
+\begin{enumerate}
+\item Si genera casualmente lo stato $x_k$
+\item Si calcola $\hat{\val}_k = \max_{u(t)} \{ r(x_k, u(t) + \alpha \mathbb{E}_{\xi(t)} \tilde{\val}(x(t+1), w_{k-1}) \}$
+\item Si aggiorna $w_k$ con un passo di discesa del gradiente
+    \begin{align}
+    w_k &= w_{k-1} - \epsilon_k \frac{\partial}{\partial w} \frac{1}{2} \Big [ \hat{\val}_k - \tilde{\val}(x_k,w) \Big]^2 \Big |_{w=w_{k-1}} = \\
+    &= w_{k-1} + \epsilon_k \Big [ \hat{\val}_k - \tilde{\val}(x_k,w_k-1) \Big] \frac{\partial}{\partial w} \tilde{\val}(x_k, w_{k-1})
+    \end{align}
+\end{enumerate}
+\textbf{N.B:} Si tratta di un algoritmo di gradiente stocastico.\\
+Pu\`o convergere pi\`u velocemente ma pu\`o avere problemi di stabilit\`a, nella pratica si usano versioni intermedie tra la sincrona e l'asincrona.
+
+\subsection{Policy Iteration}
+
+Invece che iterare sui valori (modificando i pesi $w_k$) si itera rispetto alla policy: si parte da una policy iniziale $\gamma_0(x)$ e, ricorsivamente, si calcola una nuova policy migliorata $\gamma_k(x)$ a partire da quella precedente.
+\textit{Considerazione:} Per valutare la bont\`a di una certa policy $\gamma$ si considera il reward totale associato ae essa:
+\begin{equation}
+\val^\gamma (x) = \mathbb{E}_{\xi(t)} \Big \{ \sum_{t=0}^\infty \alpha^t r(x(t), \gamma(x(t))) \Big \} \Big |_{x(0)=x}
+\end{equation} che pu\`o essere calcolato come soluzione del sistema di equazioni
+\begin{equation}
+\val^\gamma(x(t)) = r(x(t), \gamma(x(t))) + \alpha \mathbb{E}_{\xi(t)} \val^\gamma (x(t+1))
+\end{equation} con $x(t+1) = f(x(t), \gamma(x(t)),\xi(t))$ per $\forall x \in \mathbb{X}$.
+\`E l'equazione della PD stazionaria, ma senza il massimo: non si sta cercando la policy ottima (per adesso) ma solamente di valutare una policy fissata $\gamma$. Di conseguenza
+\begin{equation}
+u(t) = \gamma(x(t))
+\end{equation}
+Quando $\mathbb{X}$ \`e un insieme discreto si tratta di risolvere un sistema di $|\mathbb{X}|$ equazioni lineari.
+\begin{mybox}[breakable]{green}{\exmp{\textit{Esempio con 2 stati}}}
+\begin{center}
+\begin{tikzpicture}[->, >=stealth', auto, semithick, node distance=3cm]
+\tikzstyle{every state}=[fill=white,draw=black,thick,text=black,scale=1]
+    \node[shape=circle,draw=black] (1) at (0,0) {$x_1$};
+    \node[shape=circle,draw=black] (2) at (2,0) {$x_2$};
+    \path (1) edge[bend left] node {} (2);
+    \path (2) edge[bend left] node {} (1);
+    \path (1) edge[loop left] node {} (1);
+    \path (2) edge[loop right] node {} (2);
+\end{tikzpicture}
+\end{center}
+Si trovano i valori $\val^\gamma(x_1), \val^\gamma(x_2)$ risolvendo
+\begin{align}
+\val^\gamma(x_1) = r(x_1, \gamma(x_1)) + \alpha \Big \{ \varphi(x_1|x_1, \gamma(x_1)) \val^\gamma (x_1) + \varphi(x_2|x_1, \gamma(x_1))\val^\gamma(x_2) \Big \} \\
+\val^\gamma(x_2) = r(x_2, \gamma(x_2)) + \alpha \Big \{ \varphi(x_1|x_2, \gamma(x_1)) \val^\gamma (x_1) + \varphi(x_2|x_2, \gamma(x_2))\val^\gamma(x_2) \Big \} 
+\end{align}
+\end{mybox}
+Se si pu\`o valutare una policy allora si pu\`o anche migliorarla: si parte da una policy tentativo $\gamma_0$. 
+Per $k=0,1,\dots$
+\begin{enumerate}
+ \item Si calcola $\val^{\gamma_k}(x)$ per ogni stato $x \in \mathbb{X}$
+ \item Si aggiorna la policy effettuando un passo di programmazione dinamica, $\forall x \in \mathbb{X}$
+    \begin{equation}
+    \gamma_{k+1}(x(t)) = \arg \max_{u(t)} \Big \{ r(x(t), u(t)) + \alpha \mathbb{E}_{\xi(t)} \val^{\gamma_k}(x(t+1)) \Big \}
+    \end{equation} con $x(t+1) = f(x(t),u(t),\xi(t))$. In questa massimizzazione si suppone di essere nello stato $x(t)$ e si determina la migliore azione $u(t)$ supponendo che da $t+1$ in poi si applichi $\gamma_k$. Si pu\`o dimostrare che, per costruzione, poich\`e la $u(t)$ \`e ottimizzato (fissata la policy da $t+1$ in poi) allora il valore della policy che ho calcolato \`e sicuramente non peggiore del precedente
+    \begin{equation}
+    \val^{\gamma_{k+1}} (x(t)) \geq \val^{\gamma_k} (x(t))
+    \end{equation} e quindi questo ci garantisce la convergenza dal momento che si ha una successione monotona non decrescente limitata.
+    \begin{align}
+    &\lim_{k \to \infty} \val^{\gamma_k} (x(t)) = \val^o(x(t)) \\
+    &\lim_{k \to \infty} \gamma^k(x(t)) = \gamma^o(x(t))
+    \end{align}
+\end{enumerate}
+\textbf{Osservazione}: $\gamma_0$ policy iniziale va scelta mediante un'euristica/tecnica di sintesi. Ad esempio nella navigazione di robot $\gamma_0$ pu\`o essere la legge di controllo associata al metodo dei potenziali artificiali.
+Migliore \`e $\gamma_0$ tanto pi\`u rapida \`e la convergenza.\\
+La policy iteration \`e un metodo di tipo \textbf{actor-critic}: nel passo 1 si critica la policy attuale, valutandone il reward - ossia calcolando $\val^{\gamma_k} (x(t))$, e nel passo 2 si agisce migliorando la policy applicando la programmazione dinamica.
+
+\textit{Considerazione}: \textbf{Come si valuta la policy?} Per calcolare la value function associata alla policy $\gamma_k$ se non si riesce a risolvere in modo esatto il sistema di equazioni lineari ($\mathbb{X}$ \`e intrattabile) allora si utilizzano, ancora, funzioni approssimanti (es. reti neurali): si approssima la funzione di valore associata ad una certa policy fissata con una funzione approssimante, determinando il vettore dei parametri
+\begin{equation}
+\val^{\gamma_k}(x) \approx \tilde{\val}(x,w_k)
+\end{equation} Per determinare $w_k$ si possono applicare due metodi
+\begin{enumerate}
+\item Metodo Monte Carlo.
+\item Metodo delle differenze temporali.
+\end{enumerate}
+
+\subsection{Metodo Monte Carlo}
+Data una policy fissata $\gamma$ vogliamo approssimare la value function associata $\val^\gamma(x)$
+\begin{enumerate}
+\item Si generano casualmente degli $M$ stati $x_1, \dots, x_M$
+\item Per ogni $m =1, \dots, M$ si \textbf{simula} l'evoluzione del sistema dinamico partendo da $x(0) = x_m$ e applicando $u(t) = \gamma(x(t))$ si calcola il corrispondente reward
+    \begin{equation}
+    \hat{\val}^\gamma_m = \sum_{t=0}^\infty \alpha^t r(x(t), \gamma(x(t))) \Big |_{x(0)=x_m}
+    \end{equation} \textbf{N.B:} Non si tratta di un reward approssimato perch\`e non si ha valore atteso ma una singola realizzazione del processo aleatorio $\{\xi(t) \}$.\\
+    \textbf{N.B:} Idealmente dovremmo simulare per $T \to \infty$ ma ovviamente la simulazione viene terminata ad un certo istante $T^*$ sufficientemente grande.
+\item Si determina il vettore dei parametri $w$ della funzione approssimante risolvendo sempre un problema di regressione in modo che, per tutti gli stati che si \`e considerato, sia il pi\`u vicino possibile a quello calcolato
+    \begin{equation}
+    \tilde{\val}^\gamma(x_m, w) \approx \hat{\val}^\gamma_m, \quad m=1,\dots,M
+    \end{equation} \textbf{N.B:} Se si vuole approssimare meglio il reward vero $\val^\gamma(x_m)$ si devono considerare diverse traiettorie che partono da $x_m$ associate a diverse realizzazioni di $\{\xi(t)\}$.
+\end{enumerate}
+La \textbf{difficolt\`a} di questo metodo \`e che non \`e efficiente dal punto di vista del campionamento: \textit{si simula un'intera traiettoria per calcolare un singolo valore} $\hat{\val}^\gamma_m$, relativo allo stato iniziale. L'ideale sarebbe sfruttare \textit{tutti} gli stati che vengono attraversati in un traiettoria per aggiornare i parametri $w$. Questo \`e quello che viene fatto nel metodo $TD(\lambda)$.
+
+\subsection{Metodo dlle differenze temporali}
+
+Data una policy fissata $\gamma$ si vuole calcolare il modo approssimato (in modo esatto usualmente non \`e possibile) la corrispondente value function
+\begin{equation}
+\val^\gamma(x) = \mathbb{E}_{\xi(t)} \Big \{ \sum_{t=0}^\infty \alpha^t r(x(t),u(t)) \Big \} \Big |_{x(0)=x, u(t) = \gamma(x(t))}
+\end{equation} Ovvero il reward totale che ci aspettiamo di ottenere partendo da $x(0)=x$ associata ad una certa policy $\gamma$. La cosa importante da sottolinare \`e che \textbf{non partiamo dal modello}, bens\`i dai \textbf{dati}. Questa \`e una tecnica \textit{model-free} [i.e. non richiede di conoscere la $\varphi(x(t+1)|x(t),u(t)))$].
+L'idea \`e semplice: si supponede di essere al tempo $t$ nello stato $x(t)$:
+\begin{itemize}
+\item Si applica $u(t) = \gamma(x(t))$
+\item Si ottiene un reward istantaneo $r(x(t),u(t)) \coloneqq r(t)$
+\item Si ha la transizione allo stato $x(t+1)$.
+\end{itemize}
+Supponiamo di avere gi\`a a disposizione una value function approssimata $\tilde{\val}^\gamma (x, w(t))$ addestrata con i dati raccolti fino al tempo $t$. L'obiettivo \`e quello di aggiornare $w(t)$ sulla base dei nuovi dati $x(t), r(t), x(t+1)$. Questo si fa attraverso un algoritmo ricorsivo, che ci permetter\`a di raggiungere approssimazioni sempre migliori della value function \textit{vera}. 
+Sulla base dei nuovi dati si ha una nuova stima del valore associato allo stato $x(t)$. La value function esatta infatti \`e data da
+\begin{equation}
+\val^\gamma(x(t)) = r(x(t), \gamma(x(t))) + \alpha \mathbb{E}_{\xi(t)} \val^\alpha(x(t+1))
+\end{equation} che non sappiamo calcolare. Approssimiamo quindi con
+\begin{equation}
+\val^\gamma (x(t)) \approx r(x(t), \gamma(x(t))) + \alpha \tilde{\val}^\alpha(x(t+1), w(t))
+\end{equation} In cui invece che mediando su tutte le possibili transizioni si considera solo sulla transizione effettiva che ci porta nello stato $x(t+1)$. Inoltre, al posto della value function \textit{vera}, che stiamo cercando di calcolare e quindi non conosciamo, c'e` la sua approssimazione che conosciamo dal momento che \`e ottenuta dai dati.
+Il vettore dei parametri $w(t)$ viene aggiornato, determinando il vettore $w(t+1)$, in modo che 
+\begin{equation}
+\tilde{\val}^\alpha (x(t), w(t+1)) \approx r(t) + \alpha \tilde{\val}^\gamma (x(t+1), w(t))
+\end{equation} In particolare si effettua un passo di discesa del gradiente
+\begin{equation}
+w(t+1) = w(t) - \beta(t) \frac{\partial}{\partial w} \frac{1}{2} \Big [ r(t) + \alpha \tilde{\val}^\alpha (x(t+1), w(t)) - \tilde{\val}^\alpha (x(t), w) \Big ]^2 \Big |_{w=w(t)}
+\end{equation} in cui $\beta(t) \in (0,1)$. Si cerca di approssimata la value function nello stato $x(t)$ alla sua stima partendo dai pesi precedenti sulla base dei nuovi dati. Derivando si ha
+\begin{equation}
+w(t+1) = w(t) + \beta(t) \Big [ r(t) + \alpha \tilde{\val}^\gamma (x(t+1), w(t)) - \tilde{\val}^\gamma(x(t), w(t)) \Big ] \Big [ \frac{\partial}{\partial w} \tilde{\val}^\gamma (x(t),w) \Big ] \Big |_{w=w(t)}
+\end{equation} Che \`e l'algoritmo $TD(0)$. Se $\tilde{\val}^\gamma$ \`e una rete neurale il termine
+\begin{equation}
+\frac{\partial}{\partial w} \Big [ \tilde{\val}^\gamma (x(t),w) \Big ] \Big |_{w=w(t)}
+\end{equation} si calcola con la backpropagation. Il termine
+\begin{equation}
+r(t) + \alpha \tilde{\val}^\gamma (x(t+1), w(t))
+\end{equation} \`e la nuova stima del valore dello stato $x(t)$ sulla base dei nuovi dati, mentre
+\begin{equation}
+\tilde{\val}^\gamma (x(t), w(t))
+\end{equation} \`e la stima del valore dello stato $x(t)$ sulla base dek dati fino al tempo $t$. La differenza tra le due
+\begin{equation}
+r(t) + \alpha \tilde{\val}^\gamma (x(t+1), w(t)) - \tilde{\val}^\gamma (x(t), w(t))
+\end{equation} prende il nome di \textbf{differenza temporale (time difference) al tempo }$t$ e d\`a il nome all'algoritmo. L'algoritmo utilizza solo l'informazione relativa ai dati $x(t), r(t), x(t+1)$. La cosa importante \`e  che non si deve conoscere $x(t+1) = f(x(t), u(t), \xi(t))$, la pdf di transizione di Markov e neanche la funzione di reward $r(x(t), u(t))$ ma soltanto il reward istantaneo ottenuto $r(t)$. Questo algoritmo pu\`o essere applicato on-line o anche off-line su dati registrati.
+
+Quella che abbiamo visto ora \`e la versione $TD(0)$: esiste una versione pi\`u generale che \`e $TD(\lambda)$ in cui $\lambda \in [0,1]$
+\begin{equation}
+w(t+1) = w(t) + \beta(t) \Big [ r(t) + \alpha \tilde{\val} (x(t+1), w(t)) - \tilde{\val}(x(t),w(t)) \Big] \eta(t)
+\end{equation} con 
+\begin{equation}
+\eta (t) = \sum_{s=0}^t (\alpha \lambda)^{t-s} \frac{\partial}{\partial w} \tilde{\val}^\gamma (x(s), w(t))
+\end{equation} in cui per $\lambda \to 0$ si ottiene $TD(0)$, per $\lambda > 0$ si usano i nuovi dati $x(t), r(t), x(t+1)$ e quindi la differenza temportale al tempo $t$ per aggiornare \textbf{anche} le stime dei valori degli stati attraversati in precedenza (non vediamo perch\`e). Si ha che quindi $\lambda$ \`e un fattore di \textit{dimenticanza} (forgetting factor) e per $\lambda = 1$ si ottiene un algoritmo simile al metodo Monte Carlo. Il vettore $\eta(t)$ prende il nome di \textit{eligibility trace}.
+
+\textbf{TODO:} Discorso su approssimare il valore degli stati precedenti a partire dai dati ottenuti al tempo corrente
+
+Questo algoritmo ci permette di valutare in modo empirico la nostra policy, adesso ci interessa definire un algoritmo che permetta anche di ottimizzarla: il $Q$-learning.
+
+\subsection{Q-Learning}
+\subsubsection{Versione \textit{off-line} basata sul modello}
+L'obiettivo \`e determinare la policy ottima mediante l'algoritmo di value iteration senza richiedere di conoscere il modello di transizione di stato n\`e la funzione $r(x(t),u(t))$. Introduciamo la \textbf{action-value function}
+\begin{equation}
+Q^o (x(t), u(t)) = r(x(t),u(t)) + \alpha \mathbb{E}_{\xi(t)} \val^o(x(t+1))
+\end{equation} ed \`e la funzione che fornisce il valore (reward) dell'azione $u(t)$ nello stato $x(t)$ supponendo di applicare una generica $u(t)$ al tempo $t$ e poi da $t+1$ in poi di applicare la policy ottima. Ricordando l'equazione di Bellman della PD stazionaria
+\begin{equation}
+\val^o(x(t)) = \max_{u(t)} \Big \{ r(x(t), u(t)) + \alpha \mathbb{E}_{\xi(t)} \val^o (x(t+1)) \Big \}
+\end{equation} da cui si vede che
+\begin{equation}
+\val^o(x(t)) = \max_{u(t)} Q^o (x(t), u(t))
+\end{equation} per cui la policy ottima \`e
+\begin{equation}
+\gamma^o(x(t)) = \arg \max_{u(t)} Q^o (x(t), u(t))
+\end{equation} Nell'equazione di Bellman per\`o dobbiamo conoscere il modello: se riusciamo a calcolare in qualche modo $Q^o$ per\`o possiamo determinare la policy ottima senza conoscere $\varphi (x(t+1)|x(t),u(t))$ n\`e $r(x(t),u(t))$. Nel caso $x(t) \in X, u(t) \in U$ con $X,U$ insiemi discreti allora $Q^o(x(t), u(t))$ \`e una tabella di dimensione $|\mathbb{X}| \times |\mathbb{U}|$.\\
+L'equazione della PD pu\`o essere riscritta in termini di $Q^o$
+\begin{align}
+Q^o (x(t), u(t)) &= r(x(t),u(t)) + \alpha \mathbb{E}_{\xi(t)} \val^o(x(t+1)) = \\
+&= r(x(t),u(t)) + \alpha \mathbb{E}_{\xi(t)} \max_{u(t+1)} Q^o(x(t+1), u(t+1))
+\end{align}
+\textbf{N.B:} Rispetto all'equazione della PD si \`e invertito l'ordine degli operatori $\mathbb{E}$ e $\max$.
+
+La $Q^o$ pu\`o essere calcolata mediante \textit{value iteration asincrona}: ad ogni iterazione $k$ si aggiorna il valore di una singola coppia $x_k, u_k$. Si parte da una $Q_0(x,u)$ iniziale e, per $k=0,1,\dots$
+\begin{enumerate}
+\item Si genera una coppia $(x_k, u_k)$.
+\item Si effettua un passo di PD
+    \begin{equation}
+    Q_{k+1}(x_k, u_k) = r(x_k,u_k) + \alpha \mathbb{E}_{\xi(t)} \max_{u(t+1)} Q_k (x(t+1), u(t+1))
+    \end{equation} con $x(t+1) = f(x_k, u_k, \xi(t))$.
+\item Non si modificano gli altri: $Q_{k+1} (x, u) = Q_k(x,u), \quad \forall (x,u) \neq (x_k, u_k)$
+\end{enumerate}
+Sotto opportune ipotesi l'algoritmo converge
+\begin{equation}
+\lim_{k \to \infty} Q_k(x, u) = Q^o (x,u)
+\end{equation} \textbf{purch\`e tutti gi stati $(x,u) \in \mathbb{X} \times \mathbb{U}$ siano visitati un numero \textit{sufficiente} di volte}. Questa \`e una \textit{esplorazione dello spazio degli stati e delle configurazioni}. Quello appena esposto \`e un algoritmo off-line che si basa sul modello ma pu\`o essere reso \textbf{model-free} e in grado di funzionare in tempo reale.
+
+\subsubsection{Versione \textit{on-line} e \textit{model-free}}
+
+Consideriamo il caso semplice di \textbf{transizioni deterministiche}
+\begin{equation}
+x(t+1) = f(x(t), u(t))
+\end{equation} Supponendo di essere al tempo $t$ nello stato $x(t)$ e di applicare $u(t)$ si ottiene il reward $r(t)$, effettuando la transizione in $x(t+1)$. A questo punto si ha che l'iterazione $k$ della versione precedente pu\`o essere pensata ora come il tempo
+\begin{equation}
+Q_{t+1} (x(t), u(t)) = r(t) + \alpha \max_{u} Q_t (x(t+1), u)
+\end{equation} in cui $x(t+1)$ \`e lo stato in cui si arriva veramente al tempo $t+1$ (la transizione \`e osservata, non modellata).
+\textbf{N.B:} L'algoritmo richiede solo la conoscenza di $\{x(t)\}, \{u(t)\}$ e $\{r(t)\}$. I dati possono essere generati con qualunche policy ma \textit{deve garantire l'esplorazione} (tutte le coppie $(x,u)$ devono essere visitate un numero sufficiente di volte). Se non si hanno altri vincoli $u(t)$ pu\`o essere generata casualmente, altrimenti, se si deve anche cercare di ottimizzare le prestazioni mentre si impara, si pu\`o usare una strategia $\epsilon$-greedy:
+\begin{itemize}
+\item Con probabilit\`a $\epsilon$ si genera $u(t)$ nell'interno $\mathbb{U}$ (fase di \textit{exploration})
+\item Con probabilit\`a $1-\epsilon$ si genera $u(t)$ in modo da massimizzare il valore (fase di \textit{exploitation})
+\begin{equation}
+u(t) = \arg \max_u Q_t (x(t), u)
+\end{equation} che fornisce un \textbf{compromesso} tra \textit{eplorazione} e la \textit{massimizzazione} del valore (\textbf{exploration vs exploitation}).
+\end{itemize}
+Quello del $Q$-learning \`e un algoritmo di tipo off-policy perch\`e la policy applicata per generare i dati pu\`o anche essere indipendente da $Q_t(x(t), u(t))$.
+
+Nel caso di \textbf{transizioni stocastiche}
+\begin{equation}
+x(t+1) = f(x(t), u(t), \xi(t)) \iff \varphi(x(t+1)|x(t), u(t))
+\end{equation} non si pu\`o applicare la value iteration esatta sulla base dei dati
+\begin{equation}
+Q_{t+1} (x(t), u(t)) = r(t) + \alpha \mathbb{E}_{\xi(t)} \max_u Q_t(x(t+1), u)
+\end{equation} perch\`e $x(t+1)$ \`e unico (quello generato nel sistema reale) e quindi non si pu\`o calcolare il valore atteso rispetto a tutte le possibili transizioni: si pu\`o soltanto approssimare
+\begin{equation}
+\mathbb{E}_{\xi(t)} \max_u Q_t (x(t+1), u) \approx \max_u Q_t (x(t+1), u)
+\end{equation} massimizzando rispetto all'unica transizione realmente osservata. 
+La stima $Q_{t+1}(x(t),u(t))$ viene quindi modificata come una media pesata
+\begin{equation}
+\label{eqn:qlear}
+Q_{t+1}(x(t),u(t)) = (1 - \beta(t)) \Big [ Q_t(x(t), u(t)) \Big ] + \beta(t) \Big [ r(t) + \alpha \max_u Q_t (x(t+1), u) \Big ]
+\end{equation} tra la stima precedente (pesata con $1-\beta(t)$) e la nuova stima del valore della coppia $x(t), u(t)$ con $\beta(t) \in [0,1]$, che prende il nome di \textit{learning step} (tipicamente $\beta(t) \to 0$ per $t \to \infty$).\\
+L'algoritmo di $Q$-learning appena esaminato pu\`o anche essere scritto come
+\begin{equation}
+Q_{t+1}(x(t),u(t)) = Q_t(x(t),u(t)) + \beta(t) \Big [ r(t) + \alpha \max_u Q_t(x(t+1,u)) - Q_t(x(t),u(t)) \Big ]
+\end{equation} in cui la parte tra parentesi quadre \`e la differenza temporale al tempo $t$. Si aggiorna quindi la $Q_t$ come ne metodo $TD(0)$ (che per\`o \`e un metodo on policy) sulla base della differenza temporale (in cui per\`o compare un $\max$).
+L'algorimo converge se tutte le coppie $x,u$ sono visitate \textit{infinite} volte.
+
+\subsubsection{Q-Learning approssimato}
+
+Ricordiamo che la tecnica di $Q$-learning \ref{eqn:qlear} va bene quando $\mathbb{X} \times \mathbb{U}$ \`e un insieme di cardinalit\`a trattabile, altrimenti si va ad utilizzare una funzione approssimante
+\begin{equation}
+Q^o(x(t),u(t)) \approx \tilde{Q}(x(t),u(t),w)
+\end{equation} L'\textbf{idea} \`e che al tempo $t$ si aggiornano i parametri $w(t)$ sulla base di $x(t),u(t),r(t),x(t+1)$ mediante un passo di discesa del gradiente:
+\begin{equation}
+w(t+1) = w(t) - \beta(t) \frac{\partial}{\partial w} \frac{1}{2} \Big [ r(t) + \alpha \max_u \tilde{Q} (x(t+1),u,w(t)) - \tilde{Q}(x(t),u(t),w) \Big]^2 \Big |_{w=w(t)}
+\end{equation} dove il primo termine nelle parentesi quadre \`e la nuova stima di $Q(x(t),u(t))$. Facendo la derivata si vede bene il rapporto con il $Q$-learning standard
+\begin{align*}
+&w(t+1) = \\
+&=w(t) + \beta(t) \Big [ r(t)+\alpha \max_u \tilde{Q}(x(t+1),u,w(t)) - \tilde{Q}(x(t),u(t),w(t)) \frac{\partial}{\partial w}\Big ]\tilde{Q}(x(t),u(t),w(t))
+\end{align*}
+Questa espressione \`e analoga al metodo $TD(0)$ con $\val$ sostituita da $Q$ e con il $\max$ dal momento che stiamo cercando la $Q^o$. La quantit\`a tra parentesi \`e la differenza temporale al tempo $t$.
+Questo metodo va bene quando $\tilde{Q}(x,u,w)$ dipende \textbf{linearmente} da $w$, se invece la struttura \`e pi\`u complicata (es. reti neurali) si hanno due problemi
+\begin{enumerate}
+\item Il target della rete
+    \begin{equation} r(t) + \alpha \max_u \tilde{Q} (x(t+1), u, w(t))\end{equation}
+    dipende dall'attuale vettore di parametri $w(t)$: aggiornando la $Q$ ad ogni istante temporale si va a modificare anche il target della rete, che pu\`o dare fastidio: introducendo la ricorsione nell'aggiornamento dei $w$ si pu\`o andare incontro a \textbf{fenomeni di oscillazione/instabilit\`a}.
+\item L'ordine con cui arrivano i dati non \`e completamente casuale perch\`e $x(t), u(t),r(t),x(t+1) \to x(t+1), u(t+1), r(t+1), x(t+2)$, ovvero i dati successivi sono fortemente correlati tra loro, andando a \textbf{perdere le buone propriet\`a di convergenza del gradiente stocastico}.
+\end{enumerate}
+Per risolvere il primo si utilizzano \textbf{due} funzioni approssimanti $\tilde{Q}(x(t),u(t),w(t))$ e $\tilde{Q}(x(t),u(t),\hat{w}(t))$ dove la seconda prende il nome di target network \`e utilizzata per il calcolo del target, che diventa
+\begin{equation}
+r(t) + \alpha \max_u \tilde{Q}(x(t+1), u, \hat{w}(t))
+\end{equation} Periodicamente, ogni $T$ istanti, si pone $\hat{w}(t) = w(t)$.
+
+Per risolvere il secondo si fa uso di una tecnica di \textit{experience replay}: non si utilizzano i dati nell'ordine in cui arrivano (essendo un algoritmo off-policy si pu\`o fare). Si tengono in memoria tutti i dati $x(s),u(s),r(s),x(s+1)$ per $s=0, \dots, t-1$ e, ad ogni istante $t$:
+\begin{enumerate}
+\item Si aggiunge $x(t),u(t),r(t),x(t+1)$ alla memoria.
+\item Si estraggono casualmente $K$ istanti temporali.
+\item Per $k=1, \dots, K$ si calcola la stima aggiornata della $Q^o$
+    \begin{equation}
+    \hat{Q}_{t,k} = r(t_k) + \alpha \max_u \tilde{Q}(x(t_{k+1}),u,\hat{w}(t))
+    \end{equation}
+\item Si effettua un passo di discesa del gradiente in modo che
+    \begin{equation}
+    \tilde{Q}(x(t_k), u(t_k), w(t+1)) \approx \hat{Q}_{t,k}
+    \end{equation} ovvero (prendendo una loss quadratica)
+    \begin{equation}
+    w(t+1) = w(t) - \beta(t) \frac{\partial}{\partial w} \frac{1}{2} \sum_{k=1}^K \Big [ \hat{Q}_{t,k} - \tilde{Q}(x_k), u(t_k), w) \Big ]^2 \Big |_{w=w(t)}
+    \end{equation}
+\item Se $t$ \`e multiplo di $T$ si pone $\tilde{w}(t) = w(t+1)$.
+\end{enumerate}
+\subsection{Cenni al Reinforcement Learning Multi-Agente}
+Consideriamo $N$ agenti indipendenti
+\begin{equation}
+x(t+1) = f(x(t), u_1(t), \dots, u_N(t), \xi(t))
+\end{equation} in cui 
+\begin{itemize}
+\item Ogni agente osserva lo stato $x(t)$ o una sua parte $x_i(t)$
+\item Decide quale controllo/azione applicare $u_i(t) = \gamma_i(x_i(t))$ in modo da massimizzare un obiettivo
+    \begin{equation}
+    \mathbb{E}_{\xi(t)} \Big \{ \sum_{t=0}^\infty \alpha^t r_i(x(t), u_1, \dots, u_N(t)) \Big \}
+    \end{equation} in cui si distinguono
+\begin{enumerate}
+    \item Caso cooperativo $r_i = r, \quad \forall i=1, \dots, N$
+    \item Caso competitivo, es. $N=2$ con $r_1 = -r_2$
+    \item Caso misto
+\end{enumerate}
+\end{itemize}
+Per ottenere $\gamma_i$ invece possiamo adottare
+\begin{itemize}
+\item Un approccio \textbf{globale} in cui, per ogni agente, si impara una $Q$ del tipo
+    \begin{equation}
+    Q_i(x_i, u_1, \dots, u_N)
+    \end{equation} che dipende anche dalle decisioni degli altri agenti. Questo approccio ha il problema della complessit\`a crescente in modo esponenziale con il numero $N$ di agenti. Si ha inoltre necessit\`a di un \textbf{modello di decisione} per gli altri agenti, dal momento che si coosce solo $x_i, u_i$ e gli altri $u$ no. \textbf{Si pu\`o fare in casi particolari}:\\
+    Es. nel caso cooperativo a informazione completa $r_i = r$ e $x_i = x$ per ogni $i$:
+    \begin{align*}
+    &Q_{i,t+1}(x(t), u_1(t), \dots, u_N(t)) = \\
+    &=[1 - \beta(t)] Q_{i,t}(x(t), u_1, \dots, u_N(t)) + \beta(t) \Big [ r(t) + \alpha \max_{u_i} \max_{u_j, j\neq i} Q_{i,t}(x(t+1),u_1, \dots, u_N) \Big ]
+    \end{align*} dove il $\max_{u_j, j\neq i}$ si ha perche l'obiettivo \`e comune e si pu\`o supporre che anche gli altri agenti massimizzino la stessa $Q$. \textbf{N.B:} Se gli agenti utilizzano gli stessi dati allora $Q_i=Q$ per ogni $i$ dal momento che stanno imparando la stessa $Q$ pu\`o richiedere centralizzazione o coordinamento nel caso distribuito.
+    Es. caso competitivo in cui $N=2$ e $r_1 = -r_2$. Si ha
+    \begin{align*}
+    &Q_{i,t+1}(x(t), u_1(t), u_2(t)) = \\
+    &=[1-\beta(t)]Q_{1,t}(x(t),u_1(t),u_2(t)) + \beta(t)[r_1(t) + \alpha \max_{u_1} \min_{u_2} Q_{1,t}(x(t+1),u_1, u_2)]
+    \end{align*} che \`e un approccio $minimax$ in cui si ottimizza il caso pessimo rispetto alle decisioni dell'avversario. \textbf{N.B:} Si suppone che l'altro agente $Q_{2,t} = - Q_{1,t}$ (che potrebbe non essere vero).
+\item Un approccio \textbf{locale}: Independent learning con loss quadratica. si considerano gli altri agenti come parte dell'ambiente. Si impara una $Q_i$ del tipo
+    \begin{equation}
+    Q_i(x_i(t), u_i(t))
+    \end{equation} \textbf{N.B:} Si pu\`o fare perch\`e il $Q$-learning \`e model-free, da cui
+    \begin{align}
+    Q_{i,t+1}(x_i(t),u_i(t)) = [1-\beta(t)] Q_{i,t} (x_i(t),u_i(t)) + \\
+    \beta(t) [r_i(t) + \alpha \max_{u_i} Q_{i,t}(x_i(t+1), u_i)]
+    \end{align} Si deve conoscere semplicemente, per ogni agente $i$, $x_i(t), u_i(t), r_i(t), x_i(t+1)$.
+    La difficolt\`a qui sta nel: se anche gli altri agenti stanno imparando l'ambiente generalizzato formato da ambiente+altri agenti \textbf{non} \`e pi\`u \textbf{stazionario} ma dipende da $t$.
+    Esempio
+    \begin{align}
+    x(t+1) = f(x(t), u_1(t), u_2(t), \xi(t)) \\
+    u_2(t) = \gamma_2(x(t))
+    \end{align} con policy $\gamma_2$ fissata per l'agente 1 l'ambiente generalizzato \`e stazionario
+    \begin{equation}
+    x(t+1) = f(x(t), u_1(t), \gamma(x(t), \xi(t)))
+    \end{equation} Se invece 
+    \begin{equation}
+    u_2(t) = \gamma_2(x(t),t)
+    \end{equation} \`e una policy tempo-variante perche anche l'agente 2 sta imparando allora
+    \begin{equation}
+    x(t+1) = f(x(t), u_1(t), \gamma_2(x(t),t), \xi(t))
+    \end{equation} si ha un contributo non stazionario e la convergenza del $Q$-learning non \`e pi\`u garantita (si deve dimenticare il passato in cui gli altri agenti stavano ancora imparando per avere un ambiente stazionario, ad es. si deve stare attenti nell'experience replay perch\`e i dati possono essere non pi\`u rappresentativi). Inoltre in un contesto non stazionario il learning rate $\beta$ \textbf{non deve andare a zero}. 
+    In alternativa, quando possibile, impara solo un agente alla volta e gli altri agenti hanno una policy fissata e poi si alternano gli agenti che imparano.
+    Quando l'ambiente \`e stazionario si parla solamente di problema di apprendimento, quando l'ambiente \`e non stazionario si parla di problema di addestramento.
+\end{itemize}

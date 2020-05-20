@@ -1,0 +1,112 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{multirow,booktabs}
+\usepackage[italian]{babel}
+\usepackage[table, dvipsnames]{xcolor}
+\usepackage{fullpage}
+\usepackage{lastpage}
+\usepackage{enumitem}
+\usepackage{glossaries}
+\usepackage{fancyhdr}
+\usepackage{mdframed}
+\usepackage{float}
+\usepackage{mathrsfs}
+\usepackage{subfig}
+\usepackage{tabularx}
+\usepackage{wrapfig}
+\usepackage{setspace}
+\usepackage{calc}
+\usepackage{multicol}
+\usepackage{cancel}
+\usepackage[retainorgcmds]{IEEEtrantools}
+\usepackage[margin=3cm]{geometry}
+\usepackage{amsmath}
+\newlength{\tabcont}
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.05in}
+\usepackage{empheq}
+\usepackage{framed}
+\usepackage[subfigure]{tocloft}
+\usepackage[most]{tcolorbox}
+\usepackage{xcolor}
+\usepackage[toc,page]{appendix}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
+\usetikzlibrary{automata,arrows,positioning,calc}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks   = true, %Colours links instead of ugly boxes
+  urlcolor     = red, %Colour for external hyperlinks
+  linkcolor    = blue, %Colour of internal links
+  citecolor   = red %Colour of citations
+}
+
+\colorlet{shadecolor}{orange!15}
+\parindent 0in
+\parskip 10pt
+\geometry{margin=1in, headsep=0.25in}
+\theoremstyle{definition}
+\newtheorem{defn}{Definizione}
+\newmdtheoremenv{theo}{Teorema}
+\newtheorem{reg}{Regola}
+\newtheorem{exmp}{Esempio}
+\newtheorem{exer}{Esercizio}
+\newtheorem{note}{Nota}
+ 
+\setlength\cftparskip{-2pt}
+\setlength\cftbeforesecskip{1pt}
+\setlength\cftaftertoctitleskip{2pt}
+\newtcolorbox{mybox}[3][]
+{
+  colframe = #2!25,
+  colback  = #2!10,
+  coltitle = #2!20!black,  
+  title    = {#3},
+  #1,
+  frame hidden,
+}
+
+\numberwithin{equation}{subsection}
+\newcommand*{\info}[1]{\ensuremath{\log \frac{1}{p({#1})}}}
+\newcommand{\sumx}{\ensuremath{\sum_{x \in X}}}
+\newcommand{\sumy}{\ensuremath{\sum_{y \in Y}}}
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+
+\begin{document}
+\setcounter{section}{0}
+\title{Appunti di Teoria dell'Informazione}
+
+\thispagestyle{empty}
+
+\begin{center}
+{\LARGE \bf Appunti di Teoria dell'Informazione}\\
+{\large \textit{Giovanni Bindi}} \\
+{Universit\`a degli Studi di Firenze}
+\end{center}
+
+\tableofcontents
+
+\newpage
+\input{capitoli/chap0.tex}
+
+\newpage
+\input{capitoli/chap1.tex}
+
+\newpage
+\input{capitoli/chap2.tex}
+
+\newpage
+\input{capitoli/chap3.tex}
+
+\newpage
+\input{capitoli/chap4.tex}
+
+\newpage
+\begin{appendices}
+\input{capitoli/app.tex}
+\end{appendices}
+
+\end{document}
+

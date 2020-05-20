@@ -1,0 +1,712 @@
+\section{Sincronizzazione e Coordinamento nei Sistemi Multi-agente}
+
+Consideriamo un sistema multiagente cooperativo (SMAC) a struttura decentralizzata (SD) a tempo discreto:
+\begin{equation}
+x_i (t+1) = f_i (x_i (t), u_i (t))
+\end{equation}
+a tempo continuo sarebbe:
+\begin{equation}
+\dot{x_i}(t) = f_i (x_i (t), u_i (t))
+\end{equation}
+in cui $x(t) = [x_1(t), \dots, x_N(t)]^\intercal$ \`e il vettore di stato collettivo. Ogni agente ha quindi a disposizione un vettore informativo a dimensione variabile $y_i(t), \forall t$:
+\begin{equation}
+y_i(t) = \begin{bmatrix}
+x_i(t) \\
+x_j(t), j \in \mathcal{N}_i
+\end{bmatrix}
+\end{equation}
+e, nella nostra trattazione, considereremo per ora obiettivi formulati in termini dell'insieme $\mathbb{S}$ delle configurazioni desiderate e dell'insieme $\mathbb{V}$ delle configurazioni ammissibili. Il nostro ruolo \`e quindi \textbf{progettare leggi di controllo} del tipo:
+\begin{equation}
+u_i(t) = \gamma_i(y_i(t)), \qquad i = 1, \dots, N
+\end{equation}
+dipendenti dal vettore informativo. Si dovr\`a avere che:
+\begin{itemize}
+    \item $x(t) \in \mathbb{V}, \forall t$, supponendo che $x(0) \in \mathbb{V}$.
+    \item $x(t) \to \mathbb{S}$ per $t \to \infty$.
+\end{itemize}
+
+Consideriamo due problemi introduttivi, il primo \`e quello della
+
+\subsection{Sincronizzazione}
+
+Non abbiamo vincoli, $\mathbb{V} = \emptyset$. L'insieme degli obiettivi \`e
+\begin{equation}
+\mathbb{S} = \{x: x_i = x_j, \forall i,j\}
+\end{equation}
+ovvero si vuole che tutti gli agenti raggiungano lo stesso stato (uno stato comune). Ad esempio, nel caso di robot mobili se $x_i$ rappresenta la posizione del robot il problema della sincronizzazione prende il nome di problema di \textbf{rendez-vous}: i robot, partendo da posizioni diverse, devono incontrarsi.
+Un caso particolare del problema della sincronizzazione \`e quello della sincronizzazione alla media.
+Anche qui non abbiamo vincoli e l'insieme degli obiettivi \`e dato da:
+\begin{equation}
+\mathbb{S} = \{x: x_i = \bar{x}\}, \qquad \bar{x} = \frac{1}{N} \sum_{i=1}^N x_i(0)
+\end{equation}
+in cui gli stati degli agenti devono concergere alla media dei valori iniziali. Un'applicazione pu\`o essere quella del calcolo distribuito della media in una rete di centri di calcolo (es. sensori che eseguono misurazioni), in questo caso $x_i(t)$ rappresente il valore in memoria all'agente $i$ al tempo $t$.
+
+
+Per semplicit\`a considereremo inizialmente agenti con dinamiche semplificate:
+\begin{equation}
+\begin{cases}
+\text{TC: } \dot{x_i}(t) = u_i(t) \\
+\text{TD: } x_i(t+1) = u_i(t)
+\end{cases}
+\end{equation}
+Nel caso TC si ha
+\begin{equation}
+x_i(t) = x_i(0) + \int_{0}^t u_i(r)dr
+\end{equation}
+e per questo prende il nome di \textbf{dinamica a integratore}.
+
+\subsection{Consenso a tempo continuo}
+
+Siamo quindi nel contesto della dinamica a integratore
+\begin{equation}
+\dot{x_i}(t) = u_i(t), \qquad i=1, \dots, N
+\end{equation}
+
+L'obiettivo \`e la sincronizzazione, in cui ogni agente $i$ conosce $x_i(t)$ e $x_j(t), \forall j \in \mathcal{N}_i$. 
+L'idea semplice \`e che ogni agente confronti il suo stato $x_i(t)$ con quello dei vicini $x_j(t), j \in \mathcal{N}_i$ e agisca di conseguenza per modificare la propria condizione:
+\begin{equation}
+\begin{cases}
+\text{se } x_i(t) > x_j(t) \implies \text{ l'agente $i$ deve diminuire il suo valore} \\
+\text{se } x_i(t) < x_j(t) \implies \text{ l'agente $i$ deve aumentare il suo valore} \\
+\text{se } x_i(t) = x_j(t) \implies \text{ l'agente $i$ deve mantenere il suo valore} 
+\end{cases}
+\end{equation}
+Essendo $\dot{x_i}(t) = u_i(t)$ si ha che $u_i(t)$ rappresenta la variazione dello stato per l'agente $i$. 
+Nel caso di 1 vicino si ha che:
+\begin{equation}
+u_i(t) = x_j(t) - x_i(t)
+\end{equation}
+Se quindi $x_i(t) > x_j(t)$ allora si ha $u_i(t)<0$ e quindi l'agente $i$ diminuisce il suo valore, se $x_i(t)=x_j(t)$ allora $u_i(t)=0$ e quindi l'agente non modifica il suo valore. Se infine $x_i(t) < x_j(t)$ allora si ha $u_i(t)>0$ e quindi l'agente $i$ aumenta il suo valore.
+Nel caso di pi\`u vicini si ha (si fa un bilancio tra i valori):
+\begin{equation}
+u_i(t) = \sum_{j \in \mathcal{N}_i} x_j(t) - x_i(t)
+\end{equation}
+e questa formula prende il nome di \textbf{legge di controllo del consenso}.
+Si ha quindi che la dinamica complessiva del SMA che dobbiamo studiare \`e data da:
+\begin{equation}
+\dot{x_i}(t) = \sum_{j \in \mathcal{N}_i} x_j(t) - x_i(t), \qquad i=1, \dots, N
+\end{equation}
+ed \`e il modo pi\`u semplice per risolvere un problema di sincronizzazione.
+In questa sommatoria il nodo $i$ appare tante volte quante sono i vicini e posso quindi riscrivere la dinamica nella forma:
+\begin{align*}
+\dot{x_i}(t) &= -\sum_{j \in \mathcal{N}_i} x_i(t) + \sum_{j \in \mathcal{N}_i} x_j(t) = \\
+&= -d_i x_i(t) + \sum_{j \in \mathcal{N}_i} x_j(t) = \\
+&= - \Big [ d_i x_i(t) - \sum_{j \in \mathcal{N}_i} x_j(t) \Big], \qquad i=1, \dots, N
+\end{align*}
+in cui si vede emergere il Laplaciano: abbiamo infatti che
+\begin{equation}
+\begin{bmatrix}
+\dot{x_1}(t) \\
+\vdots \\
+\dot{x_N}(t)
+\end{bmatrix} = - \lap \begin{bmatrix}
+x_1(t) \\
+\vdots \\
+x_N(t)
+\end{bmatrix}
+\end{equation}
+e quindi che, in ultima istanza, la dinamica in termini dello stato collettivo sia del tipo:
+\begin{equation}
+\dot{x}(t) = -\lap x(t)
+\end{equation}
+
+Abbiamo quindi un sistema di questo tipo:
+\begin{equation}
+\begin{cases}
+\dot{x}_i(t) = u_i(t), \qquad i=1, \dots, N \\
+u_i(t) = \sum_{j \in \mathcal{N}_i} [x_j(t) - x_i(t)]
+\end{cases}
+\end{equation}
+Modelli di questo tipo sono anche rappresentativi per l'analisi della \textit{dinamica delle opinioni}. In questo semplice modello si vede come ci sia la tendenza a convergere verso una stessa opinione (sincronizzazione), anche se ci sono modi piu raffinati per rappresentare questo comportamento.
+
+Abbiamo visto che questo modello pu\`o essere scritto come
+\begin{equation}
+\dot{x}(t) = -\lap x(t)
+\end{equation}
+e adesso andremo ad analizzare come la connettivit\`a algebrica $\lambda_2$ influenzi la diffusione dell'informazione. Un paper di riferimento su quest'argomento \`e \href{https://ieeexplore.ieee.org/document/4118472}{Olfati-Saber et al. 2007}. 
+\textbf{La velocit\`a di convergenza} (con cui si diffonde l'informazione) \`e data da $\lambda_2$, vediamolo formalmente:
+Ricordiamo che, in uno stato di sincronizzazione (quando tutti gli stati hanno lo stesso valore)
+\begin{equation}
+x = \alpha \underline{1} \implies \lap x = \lap \alpha \underline{1} = 0
+\end{equation}
+si dice che lo stato sincronizzato \`e un \textit{equilibrio} per il sistema:
+\begin{equation}
+\dot{x}(t) = - \lap x(t) \text{ con } x(t) = \alpha \underline{1} \implies \dot{x}(t) = 0 
+\end{equation}
+ovvero che lo stato complessivo \`e costante nel tempo.
+\theo{\textit{Legge di controllo di consenso che garantisce la sincronizzazione alla media}}: 
+Sia $G$ un grafo di comunicazione non orientato e connesso, allora la dinamica associata al consenso $\dot{x}(t) = - \lap x(t)$ \`e tale che:
+\begin{equation}
+\lim_{t \to \infty} x_i(t) = \bar{x}
+\end{equation}
+in cui $\bar{x}$ \`e la media dei valori iniziali:
+\begin{equation}
+\bar{x} = \frac{1}{N} \sum_{i=1}^N x_i(0), \qquad x(0) = [x_1(0), \dots, x_N(0)]^\intercal
+\end{equation}
+\begin{tcolorbox}[enhanced, breakable, frame hidden]
+\textbf{Dim}: $\dot{x}(t) = - \lap x(t)$ \`e un sistema LTI, la soluzione \`e data da un'esponenziale di matrice:
+\begin{equation}
+x(t) = e^{- \lap t}x(0)
+\end{equation}
+Inoltre, per un grafo non orientato $\lap = V \Lambda V^\intercal$  si ha $v_1 = \frac{1}{N} \underline{1}$ e $\lambda_1 = 0$. Sfruttando le propriet\`a dell'esponenziale di matrice:
+\begin{equation}
+e^{-\lap t} = e^{- V \Lambda V^\intercal t} = -V e^{-\Lambda t} V^\intercal
+\end{equation}
+in cui
+\begin{equation}
+e^{-\Lambda t} = \begin{bmatrix}
+e^{-\lambda_1 t} & \dots & 0 \\
+\vdots & & \vdots \\
+0 & \dots & e^{-\lambda_Nt}
+\end{bmatrix} = diag\{e^{-\lambda_1t}, \dots, e^{-\lambda_Nt} \}
+\end{equation}
+Quindi abbiamo che:
+\begin{equation}
+e^{-\lap t}x(0) = V e^{-\Lambda t} V^\intercal x(0) =
+[v_1, \dots, v_N]
+\begin{bmatrix}
+e^{-\lambda_1t} & \dots & 0 \\
+\vdots & & \vdots \\
+0 & \dots & e^{-\lambda_Nt}
+\end{bmatrix} \begin{bmatrix} v_1 \\ \vdots \\ v_N \end{bmatrix} x(0)
+\end{equation}
+Essendo $v_i v_j = 0, \forall i\neq j$ e $v_i v_i =1, \forall i$ si ha che:
+\begin{equation}
+e^{-\lap t}x(0) = \big ( e^{-\lambda_1 t}v_1 v_1^\intercal + e^{-\lambda_2 t} v_2 v_2^\intercal + \dots + e^{-\lambda_N t} v_N v_N^\intercal \big ) x(0)
+\end{equation}
+Infine, passando al limite per $t \to \infty$ si ha, sfruttando il fatto che $\lambda_1 = 0$:
+\begin{align*}
+\lim_{t \to \infty} x(t) &= \lim_{t \to \infty} e^{-\lap t}x(0) = v_1 v_1^\intercal x(0) = \frac{1}{\sqrt{N}} \begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} \frac{1}{\sqrt{N}}[1 \dots 1] \begin{bmatrix} x_1(0) \\ \vdots \\ x_N(0) \end{bmatrix} = \\
+&= \frac{1}{N} \begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} \sum_{i=1}^N x_i(0) = \underbrace{\frac{1}{N}\sum_{i=1}^N x_i(0)}_{\bar{x}} \begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} = \bar{x}
+\end{align*}
+\textbf{N.B:} Per un grafo connesso 
+\begin{equation}
+e^{-\lambda_2 t}, \dots, \lambda e^{-\lambda_N t}
+\end{equation} sono tutte esponenziali di matrici convergenti a 0 (esponenzialmente). L'esponenziale che converge pi\`u lentamente \`e $e^{-\lambda_2 t}$ (se il grafo non fosse connesso non convergerebbe neanche, essendo 0) e quindi la velocit\`a di convergenza dipende da $\lambda_2$: \textbf{maggiore $\lambda_2$ pi\`u veloce la convergenza}.
+\[
+\square
+\]
+\end{tcolorbox}
+
+\subsection{Consenso a tempo discreto}
+Siamo nel caso
+\begin{equation}
+x_i(t+1) = u_i(t), \qquad i = 1, \dots, N
+\end{equation}
+Abbiamo quindi visto che nel caso a TC si possono sincronizzare gli agenti con una dinamica del tipo
+\begin{equation}
+\dot{x}_i (t) = \sum_{j \in \mathcal{N}_i} [x_j(t) - x_i(t)]
+\end{equation}
+La prima idea pu\`o essere quella di discretizzare sostituendo la derivata con il rapporto incrementale (\textit{discretizzazione di Eulero}):
+\begin{equation}
+\frac{d}{dt} x_i(t) = \dot{x}_i (t) \approx \frac{x_i(t+1) - x_i(t)}{\epsilon}
+\end{equation}
+in cui $\epsilon > 0$ prende il nome di \textit{passo di discretizzazione} (deve essere \textit{sufficientemente piccolo}, lo vedremo dopo). Abbiamo quindi (seguendo il modello):
+\begin{equation}
+\frac{x_i(t+1) - x_i(t)}{\epsilon} = \sum_{j \in \mathcal{N}_i} [x_j(t) - x_i(t)]
+\end{equation}
+da cui:
+\begin{equation}
+x_i(t+1) = x_i(t) + \epsilon \sum_{j \in \mathcal{N}_i} [x_j(t) - x_i(t)], \qquad i=1, \dots, N
+\end{equation}
+Questa uguaglianza pu\`o essere riscritta come
+\begin{align*}
+x_i(t+1) &= [x_i(t) - \epsilon \sum_{j \in \mathcal{N}_i} x_i(t)] + \sum_{j \in \mathcal{N}_i} \epsilon x_j(t) = \\
+&= x_i(t) ( 1 - \epsilon \sum_{j \in \mathcal{N}_i} 1) \\
+&= \underbrace{(1 - \epsilon d_i)}_{\pi_{ii}} x_i(t) + \sum_{j \in \mathcal{N}_i} \underbrace{\epsilon}_{\pi_{ij}} x_j(t)
+\end{align*}
+E quindi in generale il consenso a tempo discreto \`e esprimibile come:
+\begin{equation}
+x_i(t+1) = \pi_{ii} x_i(t) + \sum_{j \in \mathcal{N}_i} \pi_{ij} x_j(t)
+\end{equation}
+ovvero come una media pesata tra il valore del nodo $i$ e i valori dei vicini: la media pesata \`e in questo caso una combinazione convessa 
+\begin{equation}
+\pi_{ii} + \sum_{j \in \mathcal{N}_i} \pi_{ij} = 1
+\end{equation}
+con $\pi_{ii} >0, \pi_{ij} > 0, j \in \mathcal{N}_i$, per costruzione.
+Per quanto riguarda la scelta di $\epsilon$ si ha che, discretizzando il consenso a tempo continuo, i pesi sono dati da:
+\begin{equation}
+\begin{cases}
+\pi_{ii} = 1 - \epsilon d_i \\
+\pi_{ij} = \epsilon 
+\end{cases}
+\end{equation} e quindi, imponendo i vincoli di positivit\`a, abbiamo che
+\begin{equation}
+\begin{cases}
+\pi_{ij} > 0 \implies \epsilon > 0  \\
+\pi_{ii} > 0 \implies \epsilon < \frac{1}{d_i}
+\end{cases}
+\end{equation} da cui si ha che la scelta di $\epsilon$ \`e vincolata all'interno di: 
+\begin{equation}
+\epsilon \in \Big ( 0, \frac{1}{d_{max}} \Big )
+\end{equation} Infine si ha che forma matriciale del consenso a TD \`e esprimibile con:
+\begin{equation}
+x(t+1) = \Pi x(t)
+\end{equation} in cui $\Pi$ prende il nome di \textbf{matrice di consenso} ed \`e costruita come:
+\begin{equation}
+\Pi_{ij} = \begin{cases}
+\pi_{ij}, & \text{ se } j=i \lor j \in \mathcal{N}_i \\
+0, & \text{altrimenti }
+\end{cases}
+\end{equation}
+
+\begin{mybox}{green}{\exmp{\textit{Consenso a tempo discreto}}}
+Consideriamo questo grafo
+\label{exmp:cons}
+\begin{center}
+\begin{tikzpicture}[-, >=stealth', auto, semithick, node distance=3cm]
+\tikzstyle{every state}=[fill=white,draw=black,thick,text=black,scale=1]
+    \node[shape=circle,draw=black] (1) at (0,0) {$1$};
+    \node[shape=circle,draw=black] (2) at (2,0) {$2$};
+    \node[shape=circle,draw=black] (3) at (4,0) {$3$};
+    \path (1) edge node {} (2);
+    \path (2) edge node {} (3);
+\end{tikzpicture}
+\end{center}
+in cui si ha $d_1=1 = d_3, d_2 = 2$, quindi $\epsilon \in (0, 1/2)$:
+\begin{equation*}
+\begin{cases}
+x_1(t+1) = (1-\epsilon)x_1(t) + \epsilon x_2(t) \\
+x_2(t+1) = (1 - 2\epsilon)x_2(t) + \epsilon x_1(t) + \epsilon x_3(t) \\
+x_3(t+1) = (1 -\epsilon)x_3(t) + \epsilon x_2(t)
+\end{cases} \iff x(t+1) = \underbrace{\begin{bmatrix} 1 - \epsilon & \epsilon & 0 \\
+\epsilon & 1 -2\epsilon & \epsilon \\
+0 & \epsilon & 1-\epsilon
+\end{bmatrix}}_{\Pi} x(t)
+\end{equation*}
+\end{mybox}
+
+In generale quindi, ricapitolando, quando si discretizza il consenso tempo continuo con il metodo di Eulero si ha
+\begin{equation}
+\dot{x}(t) = -\lap x(t) \implies \frac{x_i(t+1) - x_i(t)}{\epsilon} = \sum_{j \in \mathcal{N}_i} [x_j(t) - x_i(t)]
+\end{equation} da cui, con $0 < \epsilon < 1/d_{max}$:
+\begin{equation}
+x(t+1) = x(t) - \epsilon \lap x(t) = \underbrace{(I - \epsilon \lap )}_{\Pi} x(t) = \Pi x(t)
+\end{equation}
+La matrice $\Pi$ \`e una matrice stocastica, cio\`e \`e tale che:
+\begin{itemize}
+\item Tutti gli elementi sono non-negativi.
+\item Le righe per costruzione sommando a 1.
+\end{itemize}
+
+Se $\Pi$ \`e simmetrica (\textit{come in un grafo non orientato}) anche le colonne sommano a 1 e $\Pi$ \`e una matrice doppiamente stocastica. Ricapitolando quindi abbiamo un:
+\theo{(\textit{Dinamica del consenso a tempo discreto)}}: Si ha
+\begin{equation}
+\label{eqn:consdisc}
+x(t+1) = \Pi x(t)
+\end{equation} con $\Pi$ matrice stocastica simmetrica:
+\begin{equation}
+\begin{cases}
+    \pi_{ii} > 0 \\
+    \pi_{ij} > 0, j \in \mathcal{N}_i \\
+    \pi_{ii} + \sum_{j \in \mathcal{N}_i} \pi_{ij} = 1
+\end{cases}
+\end{equation} e, se il grafo di comunicazione \`e \textbf{non orientato e connesso} allora
+\begin{equation}
+\lim_{t \to \infty} x_i(t) = \bar{x} = \frac{1}{N} \sum_{i=1}^N x_i(0)
+\end{equation} ovvero si ha, esponenzialmente, la sincronizzazione alla media (applicazione: calcolo distribuito della media).
+
+Questo meccanismo presenta per\`o una \textbf{difficolt\`a}: la scelta $\Pi = I - \epsilon \lap$ va bene ma $d_{max}$ \`e un'\textbf{informazione globale} e potremmo non conoscerla o potrebbe cambiare (ad esempio in un grafo tempo-variante).
+Esistono anche scelte alternative di $\epsilon$ che fanno uso esclusivamente di informazioni locali:
+\begin{itemize}
+\item \textit{Pesi uniformi:}
+  \begin{equation}
+  \Pi_{ij} = \begin{cases}
+  \frac{1}{d_i + 1} \text{ se } j=i \lor j \in \mathcal{N}_i \\
+  0 \text{ altrimenti }
+  \end{cases}
+  \end{equation} Seguendo l'esempio \ref{exmp:cons} si avrebbe:
+  \begin{equation}
+  \Pi = \begin{bmatrix}
+  1/2 & 1/2 & 0 \\
+  1/3 & 1/3 & 1/3 \\
+  0 & 1/2 & 2/2
+  \end{bmatrix}
+  \end{equation}
+  Questo metodo \textbf{non va bene} perch\`e $\Pi$ non \`e simmetrica e le colonne non sommano ad 1. Si converge, non alla media, bens\`i a una media pesata:
+  \begin{equation}
+  \lim_{t \to \infty} x_i(t) = \sum_{i=1}^N \frac{d_i}{\sum_{j=1}^N d_j} x_i(0)
+  \end{equation} in cui il peso dell'agente $i$-esimo dipende dal grado $d_i$ normalizzato sui vicini.
+
+\item \textit{Pesi di Metropolis:} L'idea \`e quella di simmetrizzare i pesi uniformi attraverso uno scambio di informazione locale tra vicini. La matrice $\Pi$ si costruisce nel seguente modo:
+  \begin{equation}
+  \Pi_{ij} = \begin{cases}
+  \frac{1}{1 + \max\{d_i, d_j\}}, & j \in \mathcal{N}_i \\
+  1 - \sum_{k \in \mathcal{N}_i} \pi_{ik}, & j=i \text{ (si fa il complemento a 1)} \\
+  0, & \text{altrimenti}
+  \end{cases}
+  \end{equation}
+  Seguendo l'esempio \ref{exmp:cons} si avrebbe:
+  \begin{equation}
+  \Pi = \begin{bmatrix}
+  2/3 & 1/3 & 0 \\
+  1/3 & 1/3 & 1/3 \\
+  0 & 1/3 & 2/3
+  \end{bmatrix}
+  \end{equation}
+  Per un grafo non orientato $\Pi$ \`e simmetrica e si pu\`o costruire semplicemente scambiando l'informazione sul grado con i vicini, il che \`e molto utile per applicazioni distribuite.
+\end{itemize}
+Abbiamo visto che $\Pi$ pu\`o essere costruita a partire da $\lap: \Pi = I - \epsilon \lap$ ma vale anche il viceversa: qualunque $\Pi$ stocastica pu\`o essere interpretata in termini di un opportuno Laplaciano, infatti:
+\begin{equation}
+\label{consmat}
+\Pi = I - \underbrace{(I - \Pi)}_{\lap_{\pi}} = I - \lap_{\pi}
+\end{equation} in cui $\lap_{\pi}$ \`e un Laplaciano pesato associato a $\Pi$.
+Sempre seguendo l'esempio \ref{exmp:cons} abbiamo che una generica matrice stocastica $\Pi$ pu\`o essere scritta come
+\begin{equation}
+\Pi = \begin{bmatrix}
+\pi_{11} & \pi_{12} & 0 \\
+\pi_{12} & \pi_{22} & \pi_{23} \\
+0 & \pi_{23} & \pi_{33}
+\end{bmatrix} \text{ con } \begin{cases} \pi_{11} + \pi_{12} = 1 \\ \pi_{12} + \pi_{22} + \pi_{23} = 1 \\ \pi_{23} + \pi_{33} = 1
+\end{cases}
+\end{equation} allora si pu\`o definire:
+\begin{align*}
+\lap_{\pi} &= \begin{bmatrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1
+\end{bmatrix} - \begin{bmatrix}
+\pi_{11} & \pi_{12} & 0 \\
+\pi_{12} & \pi_{22} & \pi_{23} \\
+0 & \pi_{23} & \pi_{33}
+\end{bmatrix} = \\ 
+&= \begin{bmatrix}
+1- \pi_{11} & -\pi_{12} & 0 \\
+-\pi_{12} & 1-\pi_{22} & -\pi_{23} \\
+0 & -\pi_{23} & 1-\pi_{33}
+\end{bmatrix} = \begin{bmatrix}
+\pi_{12} & -\pi_{12} & 0 \\
+-\pi_{12} & \pi_{12} + \pi_{23} & -\pi_{23} \\
+0 & -\pi_{23} & \pi_{23}
+\end{bmatrix}
+\end{align*}
+
+\subsection{Potenziali artificiali e coordinamento nei Sistemi Multi-Agente}
+
+Consideriamo una funzione $J(x)$, se ne voglio calcolare il minimo posso usare il metodo del gradiente:
+Partendo dall'inizializzazione $x(0)$ applico
+\begin{equation}
+x(t+1) = x(t) - \epsilon(t) \frac{\partial J}{\partial x} \Big | _{x=x(t)}
+\end{equation} con $\epsilon(t)$ passo di discesa e $t$ itereazione. Notiamo che, ponendo $\Pi = I - \epsilon \lap$ si ha che \textbf{il consenso} $x(t+1) = \Pi x(t)$ (\textit{con pesi che derivano dal Laplaciano}) \`e dato da:
+\begin{equation}
+x(t+1) = (I - \epsilon \lap)x(t) = x(t) - \epsilon \lap x(t)
+\end{equation} e \textbf{pu\`o essere visto come un metodo del gradiente per la funzione} $J(x) = \frac{1}{2} x^\intercal  \lap x$ con passo di discesa costante pari ad $\epsilon$. Infatti
+\begin{equation}
+\frac{\partial J (x)}{\partial x} = \frac{\partial}{\partial x} \Big \{ \frac{1}{2} x^\intercal  \lap x \Big \} = 2 \frac{1}{2} \lap x = \lap x
+\end{equation} e la funzione $J(x)$ viene detta \textbf{potenziale artificale}. Il sistema multi-agente evolve in modo da minimizzare questo potenziale e quindi il nostro obiettivo sar\`a progettare dei potenziali artificali in modo da ottenere il comportamento desiderato dal sistema. Questo d\`a un'interpretazione abbastanza chiara, dato che $J(x)$ pu\`o essere pensato \textbf{come il disaccordo complessivo tra gli agenti}:
+\begin{equation}
+J(x) = \frac{1}{2} x^\intercal  \lap x = \frac{1}{2} \sum_{\{i,j\} \in \mathcal{E}} (x_i - x_j)^2
+\end{equation} In generale per il consenso a tempo discreto:
+\begin{align*}
+x(t+1) &= \Pi x(t) = [I - (I-\Pi)]x(t) = \\
+&= (I - \lap_{\pi}) x(t) = x(t) - \lap_{\pi} x(t)
+\end{align*} quindi definisco il potenziale artificiale come 
+\begin{equation}
+J(x) = \frac{1}{2} x^\intercal  \lap_{\pi} x = \frac{1}{2} x^\intercal  (I - \Pi) x = \frac{1}{2} \sum_{\{i,j\} \in \mathcal{E}} \pi_{ij} (x_i - x_j)^2
+\end{equation} ed ho un'equivalenza con il metodo del gradiente con peso costante $\epsilon(t)=1$ e passo dato dal Laplaciano pesato. \`E importante sottolineare come \textbf{tutto sia definito mediante l'uso esclusivo dell'informazione locale}.
+
+In generale considerando agenti del tipo:
+\begin{equation}
+x_i(t+1) = u_i(t), \qquad i=1,\dots, N
+\end{equation} e un generico problema di coordinamento
+\begin{equation}
+x(t) \to \mathbb{S} \text{ per } t \to \infty \land x(t) \in \mathbb{V}, \quad \forall t
+\end{equation} con $\mathbb{S}$ insieme delle configurazioni desiderate e $\mathbb{V}$ quello delle configurazioni ammissibili vogliamo seguire quest'idea: \textit{definire un potenziale artificiale $J(x)$ corrispondente ai miei obiettivi di controllo e quindi applicare una legge di controllo che minimizzi tale potenziale} (ad esempio il metodo del gradiente).
+
+La domanda che sorge spontanea \`e: come si definisce $J(x)$? La propriet\`a che deve avere sono:
+\begin{enumerate}
+\item Deve essere sufficientemente smooth, ad esempio $J \in C^2$.
+\item La legge di controllo deve essere distribuita, cio\`e $u_i(t)$ deve dipendere solo dallo stato locale $x_i(t)$ e dalla stato dei vicini $x_j(t), j \in \mathcal{N}_i$. Per fare in modo che sia cos\`i si definisce $J(x)$ come \textit{somma di contributi}:
+  \begin{equation}
+  J(x) = \underbrace{\sum_{\{i,j\} \in \mathcal{E}} J_{\{i, j\}}(x_i, x_j)}_{\text{p.a. dell'arco $\{i,j\}$}} + \underbrace{\sum_{i=1}^N J_i(x_i)}_{\text{p.a. dell'agente $i$}}
+  \end{equation}
+  Si ha quindi
+  \begin{equation}
+  u_i(t) = x_i(t) - \epsilon(t) \Bigg ( \frac{\partial}{\partial x_i} \sum_{\{j,k\} \in \mathcal{E}} J_{\{j,k\}}(x_j, x_k) + \sum_{j=1}^N J_j(x_j) \Bigg) \Bigg |_{x=x(t)}
+  \end{equation} in cui \textit{rimangono solo i termini in cui compare l'agente} $i$, cio\`e gli archi in cui l'agente $i$ \`e una delle estremit\`a. Si ha quindi, per $i=1, \dots, N$:
+  \begin{equation}
+  u_i(t) = x_i(t) - \epsilon(t) \Bigg ( \sum_{j \in \mathcal{N}_i} \frac{\partial J_{\{i,j\}}}{\partial x_i} (x_i, x_j) + \frac{\partial}{\partial x_i} J_i(x_i) \Bigg ) \Bigg |_{x_i = x_i(t), x_j = x_j(t), j \in \mathcal{N}_i}
+  \end{equation} Ad esempio, nel problema della sincronizzazione
+  \begin{equation}
+  J_{i,j}(x_i, x_j) = \pi_{ij} (x_i - x_j)^2
+  \end{equation} che ha un punto di minimo quando $x_i = x_j$
+\item I minimi globali di $J(x)$ devono essere appartententi a $\mathbb{S}$:
+   \begin{equation}
+  \hat{\mathbb{X}} = \{ \hat{x} \in \mathbb{X} : J(\hat{x}) \leq J(x), \forall x \in \mathcal{N} \}
+   \end{equation} allora deve essere:
+   \begin{align*}
+    &\hat{\mathbb{X}} \neq \emptyset \text{ : devono esistere minimi globali} \\
+    &\hat{\mathbb{X}} \subseteq \mathbb{S} \text{ : tutti i minimi globali devono essere configurazioni desiderate}
+   \end{align*} Poich\`e $J(x)$ deve essere una somma di termini (termini relativi ai collegamenti e termini relativi agli agenti)
+   \begin{equation} 
+   J(x) = \sum_{\{i,j\} \in \mathcal{E}} J_{\{i, j\}}(x_i, x_j) + \sum_{i=1}^N J_i(x_i)
+   \end{equation} allora l'insieme $\mathbb{S}$ deve essere esprimibile in termini di condizioni su $x_i, x_j$ con $\{i,j\} \in \mathcal{E}$.
+   Nel caso della sincronizzazione abbiamo espresso $\mathbb{S}$ come
+   \begin{equation}
+   \mathbb{S} = \{ x: x_i = x_j, \forall i,j \}
+   \end{equation} questa definizione \`e una definizione globale. Si ha per\`o che per un grafo conneso pu\`o essere scritta il termini locali:
+   \begin{equation}
+   \mathbb{S} = \{ x: x_i = x_j, \forall \{i,j\} \in \mathcal{E} \}
+   \end{equation} da cui si pu\`o ri-scrivere il p.a. per la sincronizzazione in termini locali:
+   \begin{equation}
+   J(x) = \sum_{\{i,j\} \in \mathcal{E}} \pi_{ij} (x_i - x_j)^2
+   \end{equation} L'idea \`e: \textit{si parte dall'insieme delle configurazioni desiderate, si guarda se questo \`e esprimibile in termini di informazione locale e sulla base di questo si definisce il potenziale artificiale.}
+\item $J(x)$, se possbile, non deve avere minimi locali. Questo \`e garantito quando, ad esempio, $J(x)$ \`e una funzione convessa. \`E sufficiente garantire che i singoli termini $J_{\{i,j\}}$ e $J_i$ siano convesse, dal momento che la somma di funzioni convesse \`e una funzione convessa.
+\item Per garantire che $x(t) \in \mathbb{V}, \forall t$ allora $J(x)$ deve avere una \textit{barriera di potenziale} che gli impedisca di uscire dall'insieme $\mathbb{V}$, ovvero
+   \begin{equation}
+   J(x) \to \infty \text{ per } x \to \partial \mathbb{V}
+   \end{equation} dove $\partial \mathbb{V}$ \`e la frontiera (contorno) dell'insieme degli stati ammissibili. La scrittura $x \to \partial \mathbb{V}$ vuol dire che la distanza tra $x$ e $\partial \mathbb{V}$ tende a 0.
+   \begin{center}
+   \begin{tikzpicture}[scale=0.8]
+    \begin{axis}[
+    axis lines = center,
+    axis on top, scale only axis,
+    xlabel = $x$,
+    ylabel = {$J(x)$},
+    xmax = {3},
+    xmin = {-3},
+    ymax = {3},
+    ymin = {0},
+    restrict y to domain = 0:3,
+    yticklabels={,,},
+    xticklabels={,,},
+    clip=false,
+]
+\addplot [
+    domain=-5:5,
+    samples=100,
+    color=black,
+]
+{(x^2)};
+\node (des) at (0,0) {};
+\node[anchor=west] (source) at (axis cs:-0.5,1) {$\mathbb{S}$};
+\draw[dashed,red] ({axis cs:-2,0}|-{rel axis cs:0,0}) -- ({axis cs:-2,0}|-{rel axis cs:0,1});
+\draw[->](source)--(des);
+\draw[dashed,red] ({axis cs:2,0}|-{rel axis cs:0,0}) -- ({axis cs:2,0}|-{rel axis cs:0,1});
+\draw[decoration={brace,mirror,raise=5pt},decorate,red] (-2,0) -- node[below=6pt] {$\mathbb{V}$} (2,0);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\end{enumerate}
+Facciamo alcune \textit{osservazioni}:
+\begin{itemize}
+\item Non \`e sempre possibile evitare minimi locali anche se $J(x)$ la scegliamo noi, in particolare in presenza di ostacoli non convessi: in questi casi occorrono algoritmi per uscire dai minimi locali (ad esempio per aggirare l'ostacolo).
+\item La legge di controllo
+  \begin{equation}
+  x_i(t+1) = x_i(t) - \epsilon(t) \nabla_i J(x)
+  \end{equation} non tiene conto di eventuali vincoli su $u_i(t)$. In particolare si possono avere limitazioni su $x_i(t+1) - x_i(t)$, ad esempio nel caso i cui gli agenti siano agenti fisici (si potrebbe avere un ostacolo tra i due punti). Si introduce quindi una saturazione:
+  \begin{equation}
+  x_i(t+1) = x_i(t) - \frac{\tilde{x}_i(t)}{\| \tilde{x}_i(t) \|} \min \{\|\tilde{x}_i(t) \|, \tilde{x}_{max}\}
+  \end{equation} dove
+  \begin{equation}
+  \tilde{x}_i(t) = \epsilon(t) \frac{ \partial J}{\partial x_i} \Big |_{x=x(t)}
+  \end{equation} e $\tilde{x}_{max}$ \`e la massima variazione ammessa per $x(t)$. Ad esempio per robot mobili:
+  \begin{equation}
+  \tilde{x}_{max} = V_{max} + T_s
+  \end{equation} dove $V_{max}$ \`e la velocit\`a massima e $T_s$ \`e il tempo di campionamento.
+\item Nel caso generale, con dinamica del tipo
+  \begin{equation}
+  x_i(t+1) = f_i \Big ( x_i(t), u_i(t) \Big )
+  \end{equation}
+  si determina il valore $\hat{x}_i(t+1)$ desiderato mediante potenziale artificiale:
+  \begin{equation}
+  \hat{x}_i(t+1) = x_i(t) - \nabla_i J(x)
+  \end{equation} e poi si usa $\hat{x}_i(t+1)$ come riferimento per un controllo locale di basso livello.
+\end{itemize}
+
+\textbf{TODO:} Diagramma di controllo
+
+\subsection{Consenso per grafi orientati}
+
+Sia $\mathcal{G} = (\mathcal{N}, \mathcal{E})$ un grafo orientato. Vogliamo connettere il problema del consenso a tempo continuo 
+\begin{equation}
+    \dot{x}_i(t) = \sum_{j \in \mathcal{N}_i} a_{ij}[x_j(t)- x_i(t)], \quad i = 1, \dots, N
+\end{equation} con $a_{ij}>0$ peso che indica l'influenza dell'agente $i$ sull'agente $j$ allo studio della dinamica di opinione su reti sociali.\\
+Sia $x_i$ l'opinione dell'agente $i$. Si ha
+  \begin{equation}
+  \begin{cases}
+  x_i>0 \text{ opinione positiva}\\
+  x_i=0 \text{ opinione neutra}\\
+  x_i<0 \text{ opinione negativa}
+  \end{cases}
+  \end{equation}
+con $a_{ij}$ che indica quanto pesa l'opinione $j$ per $i$ (può dipendere ad esempio dalla reputazione).\\
+La dinamica complessiva TC pu\`o essere quindi espressa come
+\begin{equation}
+    \dot{x}(t) = -\lap x(t)
+\end{equation}con $\lap$ laplaciano pesato (non necessariamente simmetrico). A tempo discreto si avrebbe, come in \ref{eqn:consdisc}
+\begin{equation}
+    x_I(t+1) = \pi_{ii} x_i(t)+\sum_{j \in \mathcal{N}_i} \pi_{ij} x_j(t)
+\end{equation}
+con
+\begin{equation}
+\begin{cases}
+\pi_{ii} > 0\\
+\pi_{ii} + \sum_{j \in \mathcal{N}_i} \pi_{ij} = 1
+\end{cases}
+\end{equation}
+da cui, definendo come prima $\Pi$ la matrice di consenso (in generale non simmetrica), seguendo \ref{consmat} si ha
+\begin{equation}
+    x(t+1) = \Pi x(t) = x(t) - \lap_{\pi} x(t)
+\end{equation}
+che, nel caso di un grafo non orientato (con $\lap$ simmetrico) porta a una sincronizzazione alla media
+\begin{align}
+&\lim_{t \to \infty} x_i(t) = \bar{x}\\
+&\bar{x}=\frac{1}{N} \sum{i=1}^{N}{x_i(0)}
+\end{align}
+Cosa succede quando $\mathcal{G}$ \`e orientato? Distinguiamo 3 casi:
+\begin{enumerate}
+    \item \label{orinted_cases:gfc} Grafo \textbf{fortemente connesso} (\textit{tutti i nodi sono leader}): Ad esempio
+    \begin{center}
+        \begin{tikzpicture}[->, >=stealth', auto, semithick, node distance=3cm]
+        \tikzstyle{every state}=[fill=white,draw=black,thick,text=black,scale=1]
+        \node[shape=circle,draw=black] (A) at (0,0) {$a$};
+        \node[shape=circle,draw=black] (B) at (1,1) {$b$};
+        \node[shape=circle,draw=black] (C) at (2,0) {$c$};
+        \node[shape=circle,draw=black] (D) at (3,1) {$d$};
+        \path (A) edge node {} (B);
+        \path (B) edge node {} (C);
+        \path (C) edge node {} (A);
+        \path (D) edge node {} (C);
+        \path (B) edge node {} (D);
+        \end{tikzpicture}
+    \end{center}
+    \item \label{orinted_cases:gqfc} Grafo \textbf{quasi fortemente connesso} (\textit{esiste almeno un nodo leader}): Ad esempio
+    \begin{center}
+        \begin{tikzpicture}[->, >=stealth', auto, semithick, node distance=3cm]
+        \tikzstyle{every state}=[fill=white,draw=black,thick,text=black,scale=1]
+        \node[shape=circle,draw=black] (B) at (1,1) {$a$};
+        \node[shape=circle,draw=black] (C) at (2,0) {$b$};
+        \node[shape=circle,draw=black] (D) at (3,1) {$c$};
+        \path (B) edge node {} (C);
+        \path (D) edge node {} (C);
+        \path (B) edge node {} (D);
+        \end{tikzpicture}
+    \end{center}
+    \item \label{orinted_cases:gnqfc} Grafo \textbf{debolmente connesso} (\textit{non ci sono leader}): Ad esempio
+    \begin{center}
+        \begin{tikzpicture}[->, >=stealth', auto, semithick, node distance=3cm]
+        \tikzstyle{every state}=[fill=white,draw=black,thick,text=black,scale=1]
+        \node[shape=circle,draw=black] (B) at (1,1) {$a$};
+        \node[shape=circle,draw=black] (C) at (2,0) {$b$};
+        \node[shape=circle,draw=black] (D) at (3,1) {$c$};
+        \path (B) edge node {} (C);
+        \path (D) edge node {} (C);
+        \end{tikzpicture}
+    \end{center}
+\end{enumerate}
+
+Nel caso (\ref{orinted_cases:gfc}) il laplaciano $\lap$ ha un solo autovalore in $0$ (il comportamento \`e simile ad un grafo non orientato connesso). Si ha sincronizzazione con $\lim_{t \to \infty} x_i(t) = \bar{x}$ in cui tuttavia, in generale, $\bar{x}$ non coincide con la media dei valori iniziali $\frac{1}{N} \sum_{i=1}^{N} x_i(0)$ ma bensì con una media media pesata
+\begin{equation}
+    \bar{x} = \sum_{i=1}^{N} \omega_i x_i(0)
+\end{equation}
+con $\omega_i$ peso dell'agente $i$-esimo sul valore di sincronizzazione. \\
+Ovviamente vale $\omega_i > 0, \hspace{4pt} \forall i$ e $\sum_i \omega_i = 1$.\\
+Il peso $\omega_i$ è una \textbf{misura dell'importanza} dell'agente $i$ nel grafo, \`e cio\`e una misura di \textbf{centralità} dell'agente $i$-esimo.\\
+\textit{Come si calcolano} i pesi $\omega_i$? Ricordando che $\lap$ ha un autovalore $\lambda_1=0 \implies$ esiste autovettore destro $\lap v_1 = \lambda_1 v_1 = 0$ con  $v_1 = \frac{1}{N} \underline{1}$. Esiste poi un autovalore sinistro $w: w^\intercal \lap = \lambda_1 w^\intercal$. \\
+Il vettore di pesi $w$ \textit{si calcola quindi attraverso la soluzione di}
+\begin{equation}
+    w^\intercal \lap = 0
+\end{equation}
+Consideriamo la quantità:
+\begin{equation}
+w^\intercal x(t) = 
+\begin{bmatrix}
+w_1 \dots w_N
+\end{bmatrix} \begin{bmatrix}
+x_1(t) \\
+\vdots \\
+x_N(t)
+\end{bmatrix} = \sum_{i = 1}^{N} w_i x_i(t)
+\end{equation}
+derivandola per ottenere la sua variazione si ha
+\begin{equation}
+    \frac{d}{dt} [w^\intercal x(t)] = w^\intercal \frac{d}{dt} x(t) = w^\intercal \dot x(t) = -w^\intercal \lap x(t) = 0
+\end{equation}
+Ovvero che la quantit\`a $w^\intercal x(t)$ è costante. Si ha quindi che nell'evoluzione della dinamica
+\begin{equation}
+    \dot{x}(t) = - \lap x(t)
+\end{equation}
+la quantit\`a $w^\intercal x(t)$ si \textbf{conserva} e che ha quindi, per l'invarianza temporale, vale
+\begin{equation}
+    w^\intercal x(0) = \lim_{t \to \infty} w^\intercal x(t) = w^\intercal \lim_{t \to \infty} x(t)
+\end{equation}
+Inoltre, dal momento che si ha sincronizzazione
+\begin{equation}
+    \lim_{t \to \infty} x(t) = \overline{x}\underline{1} =  \begin{bmatrix}
+        \overline{x}_1  \\ 
+        \vdots \\
+        \bar{x}_N
+    \end{bmatrix}
+\end{equation}
+vale
+\begin{equation}
+    \begin{aligned}
+    &w^\intercal x(0) = w^\intercal \bar{x}\underline{1} = \bar{x} w^\intercal \underline{1} \implies \sum_{i = 1}^{N} w_i x_i(0) = \bar{x} \sum_{i = 1}^{N} w_i \\
+    &\implies \bar{x} = \frac{\sum_{i = 1}^{N} w_i x_i(0)}{\sum_{i = 1}^{N} w_i} = \sum_{i = 1}^{N} \omega_i x_i(0) \\
+    &\implies \omega_i = \frac{w_i}{\sum_i w_i}
+    \end{aligned}
+\end{equation}
+
+Nel caso (\ref{orinted_cases:gqfc}) c'è un solo autovalore  in $0$, ovvero si ha sincronizzazione
+\begin{equation}
+    \lim_{t \to \infty} x_i(t) = \overline{x} \text{ con } \overline{x} = \sum^N \omega_i x_i(0) \text{ e }
+    \omega_i = \begin{cases}
+    >0, & \text{ se $i$ è leader} \\
+    =0, & \text{ se $i$ non è leader}
+    \end{cases}
+\end{equation}
+\begin{mybox}[breakable]{green}{}
+Consideriamo il caso seguente \\
+\begin{center}
+\begin{tikzpicture}[->, >=stealth', auto, semithick, node distance=3cm]
+        \tikzstyle{every state}=[fill=white,draw=black,thick,text=black,scale=1]
+        \node[shape=circle,draw=black] (1) at (1,2) {$a$};
+        \node[shape=circle,draw=black] (2) at (2,0) {$b$};
+        \node[shape=circle,draw=black] (3) at (3,2) {$c$};
+        \path (1) edge node {} (2);
+        \path (3) edge[bend right] node {} (1);
+        \path (2) edge node {} (3);
+        \path (1) edge node {} (3);
+\end{tikzpicture}
+\end{center}
+Dove i leader sono $a$ e $b$. Si ha $\omega_1 = \omega_2 = \frac{1}{2}$.
+\end{mybox}
+Nel caso (\ref{orinted_cases:gnqfc}) vi sono più autovalori in 0 il che implica che non ci sia sincronizzazione.
+\begin{mybox}[breakable]{green}{}
+Consideriamo il seguente grafo
+\begin{center}
+\begin{tikzpicture}[->, >=stealth', auto, semithick, node distance=3cm]
+        \tikzstyle{every state}=[fill=white,draw=black,thick,text=black,scale=1]
+        \node[shape=circle,draw=black] (1) at (1,1) {$a$};
+        \node[shape=circle,draw=black] (3) at (2,0) {$b$};
+        \node[shape=circle,draw=black] (2) at (3,1) {$c$};
+        \path (1) edge node {} (3);
+        \path (2) edge node {} (3);
+\end{tikzpicture}
+\end{center}
+in cui 
+\begin{equation}
+    \begin{aligned}
+    &x_1(t)=x_1(0) \\
+    &x_2(t)=x_2(0) \\
+    &x_3(t) \underset{t \to \infty}{\rightarrow} \frac{x_1(0)+x_2(0)}{2} \implies x_3(t) = w_1 x_1(0)+w_2 x_2(0)
+    \end{aligned}
+\end{equation}
+Si formano dunque \textbf{cluster di opinione}.
+\begin{equation}
+    \begin{cases}
+    \dot{x}_1(t)=0 \\
+    \dot{x}_12(t)=0 \\
+    \dot{x}_1(t)= x_1(t) + x_2(t) - x_3(t)
+    \end{cases}
+\end{equation}
+\textbf{TODO:} Disegnare il grafo con i cluster.\\
+Tutti i nodi di C1 si sicronizzano con una media pesata dei valori iniziali dei nodi di C1. E così per C2, mentre quelli di C3 ad una media pesata sui valori di C1 e C2.\\
+\end{mybox}
+Tali modelli di dinamica di opinione sono i più semplici ma esistono anche modelli più raffinati, come ad esempio il \textbf{Bounded Confidence Model}, in cui $j \in \mathcal{N}_i$ influenza l'opinione  di $i$ se e solo se le opinioni di $j$ e $i$ non sono troppo distanti tra loro.
+\begin{equation}
+    \dot{x}_i(t) = \sum_{j \in \mathcal{N}_i:|(x_i(t)-x_j(t)|<\rho}  a_{ij} [x_j(t) - x_i(t)]
+\end{equation}
+Con $\rho$ intervallo di confidenza che esprime il distacco delle opinioni.\\
+In modello di questo tipo si possono formare cluster di opinione anche in grafi fortemente connessi (avendo dipendenza dalle opinioni iniziali).
